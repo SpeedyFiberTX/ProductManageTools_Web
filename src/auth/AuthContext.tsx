@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-const API_BASE = "https://api.instantcheeseshao.com";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 type User = { id: string; email: string; role?: string } | null;
 

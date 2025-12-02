@@ -5,10 +5,13 @@
 export * from "./registry";
 
 import "./novariants.calc";
+import "./novariants_taa.calc";
 import "./fiberPatch.calc";
 import "./TAAfiberPatch.calc";
+import "./fiberPatch_armored.calc";
 import "./uniboot.calc";
 import "./mtpmpo.calc";
+import "./mtpmpo_taa.calc";
 import "./aoc_transceiver.calc";
 import "./loopback.calc";
 import "./notion.calc";

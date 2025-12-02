@@ -2,7 +2,7 @@
 // File: src/variants/TAAfiberPatch.calc.js
 // ============================
 import { registerCalculator } from "./registry";
-import { findKey, makeCommon } from "./helpers";
+import { findKey, makeCommon_taa } from "./helpers"; //注意這邊要引入 taa 的資料，庫存才會對
 import { fiberPatchCableTable } from "../utils/fiberPatchCableTable";
 
 // 去掉 TA- 前綴（大小寫不拘，允許 TA 與 TA-）
@@ -31,7 +31,7 @@ async function buildVariantsPayload_TAAFiberPatch_row(row) {
   if (!handle || !origBaseSku) return [];
 
   const lookupBaseSku = stripTAPrefix(origBaseSku);           // e.g. SMDXRGLCASCU2YNP
-  const common = makeCommon(row);
+  const common = makeCommon_taa(row);
 
   // 用「去掉 TA- 的 baseSku」查表，讓前 5 碼/NP 規則生效
   const { variants } = await fiberPatchCableTable(lookupBaseSku);

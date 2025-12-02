@@ -9,7 +9,7 @@ import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 
 import { useAuth } from "../auth/AuthContext";
-const API_BASE = "https://api.instantcheeseshao.com";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function UpdateVariants() {
   const {

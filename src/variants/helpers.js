@@ -2,6 +2,7 @@
 // File: src/variants/helpers.js
 // ============================
 import { PRODUCT_DEFAULTS } from "../utils/buildPayload";
+import { PRODUCT_DEFAULTS_TAA } from "../utils/buildPayload";
 
 export function norm(s) {
   return String(s).replace(/[\s_]+/g, "").toLowerCase();
@@ -44,6 +45,20 @@ export function makeCommon(row) {
   const handle = String(row?.[handleKey] ?? "").trim();
   const common = { ...PRODUCT_DEFAULTS, handle };
   Object.keys(PRODUCT_DEFAULTS).forEach((k) => {
+    const keyInRow = findKey(row, k);
+    if (keyInRow && String(row[keyInRow]).trim() !== "") {
+      common[k] = String(row[keyInRow]);
+    }
+  });
+  return common;
+}
+
+/** 共用：從 row + PRODUCT_DEFAULTS 產出共用欄位(TAA版本) */
+export function makeCommon_taa(row) {
+  const handleKey = findKey(row, "Handle");
+  const handle = String(row?.[handleKey] ?? "").trim();
+  const common = { ...PRODUCT_DEFAULTS_TAA, handle };
+  Object.keys(PRODUCT_DEFAULTS_TAA).forEach((k) => {
     const keyInRow = findKey(row, k);
     if (keyInRow && String(row[keyInRow]).trim() !== "") {
       common[k] = String(row[keyInRow]);

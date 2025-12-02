@@ -168,6 +168,14 @@ export default function Metafields_Filter({ currentRow, canEdit, isChecked, togg
                         selectKeys={["filter.gender"]}
                         isChecked={isChecked(["filter.gender"])}
                         onToggle={toggleSelected} />
+                    <CardContent
+                        row={currentRow}
+                        title="#TAA"
+                        field="#TAA"
+                        canEdit={canEdit}
+                        selectKeys={["filter.taa"]}
+                        isChecked={isChecked(["filter.taa"])}
+                        onToggle={toggleSelected} />
                 </div>
             </div>
         </div>

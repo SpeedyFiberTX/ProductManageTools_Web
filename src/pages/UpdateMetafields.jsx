@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useCsv } from "../stores/useCsv";
 import EmptyState from "../component/EmptyState";
 import RequireColumn from "../component/RequireColumn";
-
 import AsideList from "../component/asideList";
 import Hero from "../component/Hero";
 import Metafields_Content from "../component/Metafields_Content";
@@ -16,7 +15,7 @@ import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
 
 import { useAuth } from "../auth/AuthContext";
-const API_BASE = "https://api.instantcheeseshao.com";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function UpdateMetafields() {
   const { accessToken } = useAuth();

@@ -15,6 +15,19 @@ export const PRODUCT_DEFAULTS = {
   "Variant Inventory Qty / SpeedyFiberTX TW": ""
 };
 
+export const PRODUCT_DEFAULTS_TAA = {
+  "Variant Grams": "0",
+  "Variant Inventory Tracker": "shopify",
+  "Variant Inventory Qty / SpeedyFiberTX SPTW": "200",
+  "Variant Inventory Qty / SpeedyFiberTX Shenzhen": "0",
+  "Variant Inventory Policy": "continue",
+  "Variant Requires Shipping": "TRUE",
+  "Variant Taxable": "TRUE",
+  "Variant Compare At Price": "",
+  "Variant Barcode": "",
+  "Variant Inventory Qty / SpeedyFiberTX TW": ""
+};
+
 const METAFIELDS_DEFAULTS = {
   "theme.label_1_bg_color": "#6D6A6A",
   "theme.label_1_text_color": "#FFFFFF",
@@ -79,6 +92,7 @@ const METAFIELDS_FIELDS = [
   ["#Polarity", "filter.polarity"],
   ["#Body Type", "filter.bodyType"],
   ["#Gender", "filter.gender"],
+  ["#TAA", "filter.taa"],
   // Compatibility Brand
   ["Compatibility", "custom.compatibility"],
   // Theme
@@ -87,6 +101,8 @@ const METAFIELDS_FIELDS = [
   ["Label 3", "theme.label_3"],
   ["Shipping Time", "theme.shipping_time"],
   ["是否開啟詢價", "theme.inquiry"],
+  // 關聯產品
+  ["關聯產品","recommendation.related_products"]
 ];
 
 // 翻譯欄位

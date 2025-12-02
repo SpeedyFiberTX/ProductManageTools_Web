@@ -9,7 +9,7 @@ import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 
 import { useAuth } from "../auth/AuthContext";
-const API_BASE = "https://api.instantcheeseshao.com";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function CreateVariants() {
   const { accessToken } = useAuth();
@@ -121,7 +121,7 @@ export default function CreateVariants() {
 
   return (
     <>
-      <Hero pageTitle="建立變體" onSubmit={handleSubmitAll} />
+      <Hero pageTitle="建立變體/更新庫存" onSubmit={handleSubmitAll} />
 
       <div className="container mx-auto px-4 py-8">
         {rows.length === 0 ? (
