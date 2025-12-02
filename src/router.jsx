@@ -14,6 +14,7 @@ import UpdateRelativeProducts from "./pages/UpdateRelativeProducts";
 import UpdateTranslation from "./pages/UpdateTranslation";
 import UpdateVariants from "./pages/UpdateVariants";
 import DeleteTranslate from "./pages/deleteTranslate";
+import BackupPage from "./pages/BackupPage";
 
 // 公開頁
 import LoginPage from "./pages/Login";
@@ -46,6 +47,7 @@ export const route = createBrowserRouter(
             { path: "update_translation", element: <UpdateTranslation /> },
             { path: "update_variants", element: <UpdateVariants /> },
             { path: "delete_translate", element: <DeleteTranslate /> },
+            { path: "backup", element: <BackupPage /> },
           ],
         },
       ],

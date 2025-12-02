@@ -8,6 +8,7 @@ const navItems = [
   { label: "更新變體", to: "/update_variants" },
   { label: "更新翻譯", to: "/update_translation" },
   { label: "更新關聯產品", to: "/update_relative_products" },
+  { label: "系統備份", to: "/backup" }
 ];
 
 export default function Header() {
