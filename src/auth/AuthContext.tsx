@@ -2,12 +2,20 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
-type User = { id: string; email: string; role?: string } | null;
+// 🟢 修改 User 定義
+type User = { 
+  id: string; 
+  email: string; 
+  role?: string;
+  two_factor_enabled?: boolean; // 🟢 新增這行
+} | null;
 
 type AuthContextType = {
   user: User;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
+  login2FA: (code: string, tempToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   ready: boolean;
 };
 
@@ -18,7 +26,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // 啟動時嘗試 refresh → 再取得使用者資訊
     (async () => {
       await refresh();
       await loadMe();
@@ -33,12 +40,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // 🟢 這是重新載入使用者狀態的關鍵函式
   async function loadMe() {
-    const r = await fetch(`${API_BASE}/api/me`, {
-      credentials: 'include',
-    });
-    if (r.ok) setUser(await r.json());
-    else setUser(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/me`, {
+        credentials: 'include',
+      });
+      if (r.ok) {
+        const data = await r.json();
+        setUser(data); // 更新 User 狀態
+      } else {
+        setUser(null);
+      }
+    } catch {
+      setUser(null);
+    }
   }
 
   async function login(email: string, password: string) {
@@ -48,8 +64,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    if (!r.ok) throw new Error('Login failed');
-    // Login 成功後 → 取得使用者資料
+    
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Login failed');
+
+    if (data.require2fa) {
+        return data; 
+    }
+
+    await loadMe();
+    return data;
+  }
+
+  async function login2FA(code: string, tempToken: string) {
+    const r = await fetch(`${API_BASE}/auth/2fa/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, tempToken }),
+        credentials: 'include',
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Verification failed');
+    
     await loadMe();
   }
 
@@ -62,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, ready }}>
+    <AuthContext.Provider value={{ user, login, login2FA, logout, reloadUser: loadMe, ready }}>
       {children}
     </AuthContext.Provider>
   );

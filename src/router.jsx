@@ -15,6 +15,7 @@ import UpdateTranslation from "./pages/UpdateTranslation";
 import UpdateVariants from "./pages/UpdateVariants";
 import DeleteTranslate from "./pages/deleteTranslate";
 import BackupPage from "./pages/BackupPage";
+import Setup2FA from "./pages/Setup2FA";
 
 // 公開頁
 import LoginPage from "./pages/Login";
@@ -48,6 +49,7 @@ export const route = createBrowserRouter(
             { path: "update_variants", element: <UpdateVariants /> },
             { path: "delete_translate", element: <DeleteTranslate /> },
             { path: "backup", element: <BackupPage /> },
+            { path: "setup_2fa", element: <Setup2FA /> },
           ],
         },
       ],
