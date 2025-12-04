@@ -2,8 +2,7 @@
 import { useAuth } from '../auth/AuthContext';
 
 // ✅ 同網域就用空字串，跨網域就填完整 origin
-const API_BASE = 'https://api.instantcheeseshao.com';
-
+const API_BASE =  import.meta.env.VITE_API_BASE;
 // 去重複用的 refresh promise，避免同時多個 401 重複打 refresh
 let refreshPromise: Promise<Response> | null = null;
 
