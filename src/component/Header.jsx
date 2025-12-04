@@ -1,7 +1,9 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { usePlatform } from "../stores/PlatformContext"; // 引入 Context
 
-const navItems = [
+// 🟢 定義 Shopify 選單 (原本的 navItems)
+const SHOPIFY_NAV = [
   { label: "🚀建立產品", to: "/" },
   { label: "更新基本資訊", to: "/update_products" },
   { label: "更新自訂欄位", to: "/update_metafields" },
@@ -12,9 +14,18 @@ const navItems = [
   { label: "系統備份", to: "/backup" }
 ];
 
+// 🟢 定義 Amazon 選單 (新的)
+const AMAZON_NAV = [
+  { label: "📊 總覽 Dashboard", to: "/amazon/dashboard" },
+  { label: "📥 匯入報表", to: "/amazon/upload" },
+];
+
 export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  
+  // 使用 Context 取得當前平台狀態
+  const { platform, setPlatform } = usePlatform();
 
   const handleLogout = async () => {
     if (!confirm("確定要登出嗎？")) return;
@@ -22,13 +33,41 @@ export default function Header() {
     navigate("/login");
   };
 
+  // 切換平台處理
+  const handlePlatformChange = (e) => {
+    const newPlatform = e.target.value;
+    setPlatform(newPlatform);
+    // 切換後導向該平台的首頁
+    navigate(newPlatform === 'shopify' ? '/' : '/amazon/dashboard');
+  };
+
+  // 根據平台決定顯示哪個選單
+  const navItems = platform === 'shopify' ? SHOPIFY_NAV : AMAZON_NAV;
+
+  // 樣式設定：Amazon 模式使用淡橘色背景以示區別
+  const headerClass = platform === 'shopify' 
+    ? "sticky top-0 z-40 w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-slate-200/60"
+    : "sticky top-0 z-40 w-full bg-orange-50/90 backdrop-blur supports-[backdrop-filter]:bg-orange-50/60 border-b border-orange-200/60";
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-slate-200/60">
+    <header className={headerClass}>
       <div className="container mx-auto px-4 flex items-center justify-between">
-        {/* 左側：導航選單 (flex-1 佔據剩餘空間，overflow-x-auto 保持水平捲動) */}
+        
+        {/* 左側：平台切換器 */}
+        <div className="flex items-center gap-3 mr-4 border-r border-slate-300 pr-4 py-3">
+            <select 
+                value={platform} 
+                onChange={handlePlatformChange}
+                className="bg-transparent font-bold text-slate-700 cursor-pointer outline-none hover:text-indigo-600 transition text-sm"
+            >
+                <option value="shopify">🛍️ Shopify</option>
+                <option value="amazon">📦 Amazon</option>
+            </select>
+        </div>
+
+        {/* 中間：導航選單 */}
         <nav className="flex items-center gap-2 overflow-x-auto py-3 custom-scroll flex-1 mr-4">
           {navItems.map(({ label, to }) => {
-            // 只要 label 包含火箭符號就視為重點項目
             const isYellow = label.includes("🚀");
 
             return (
@@ -52,10 +91,9 @@ export default function Header() {
           })}
         </nav>
 
-        {/* 右側：使用者資訊 & 登出按鈕 */}
+        {/* 右側：使用者資訊 & 登出 */}
         {user && (
           <div className="flex items-center gap-3 shrink-0 pl-4 border-l border-slate-300">
-            {/* 電腦版顯示 Email 與角色 */}
             <div className="hidden md:flex flex-col items-end leading-tight">
               <span className="text-sm font-semibold text-slate-700">{user.email}</span>
               {user.role && (
@@ -65,7 +103,6 @@ export default function Header() {
               )}
             </div>
 
-            {/* 登出按鈕 */}
             <button
               onClick={handleLogout}
               className="group flex items-center justify-center rounded-lg bg-slate-100 p-2 text-slate-600 transition-all hover:bg-red-50 hover:text-red-600"
