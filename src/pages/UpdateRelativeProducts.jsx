@@ -4,7 +4,7 @@ import { useCsv } from "../stores/useCsv";
 import EmptyState from "../component/EmptyState";
 import RequireColumn from "../component/RequireColumn";
 import Metafields_Recommendation from "../component/Metafields_Recommendation";
-import AsideList from "../component/asideList";
+import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
 import UpdateButtonRow from "../component/updateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";

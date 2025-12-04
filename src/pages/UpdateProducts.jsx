@@ -5,7 +5,7 @@ import EmptyState from "../component/EmptyState";
 import RequireColumn_withDescription from "../component/RequireColumn_withDescription";
 import SeoSetting from "../component/SeoSetting";
 import ProductSetting from "../component/ProductSetting";
-import AsideList from "../component/asideList";
+import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
 import UpdateButtonRow from "../component/updateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";

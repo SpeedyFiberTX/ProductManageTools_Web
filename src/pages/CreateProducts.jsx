@@ -10,7 +10,7 @@ import Metafields_Table from "../component/Metafields_Table";
 import Metafields_Theme from "../component/Metafields_Theme";
 import ProductSetting from "../component/ProductSetting";
 import Translate from "../component/Translate";
-import AsideList from "../component/asideList";
+import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";

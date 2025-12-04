@@ -3,7 +3,7 @@ import { useCsv } from "../stores/useCsv";
 import EmptyState from "../component/EmptyState";
 import RequireColumn from "../component/RequireColumn";
 import Variants from "../component/Variants";
-import AsideList from "../component/asideList";
+import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
