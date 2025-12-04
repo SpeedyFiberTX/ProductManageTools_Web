@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // 用 callback 取得 { mode }，同時設定 base
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/ProductManageTools_TEST/' : '/',
+  base: '/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
