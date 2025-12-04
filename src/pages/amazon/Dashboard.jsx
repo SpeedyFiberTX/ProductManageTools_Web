@@ -24,7 +24,7 @@ export default function AmazonDashboard() {
   const [searchText, setSearchText] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'sales', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10; // 每頁顯示筆數
+  const pageSize = 10;
 
   // --- 2. 資料讀取 ---
   useEffect(() => {
@@ -46,7 +46,6 @@ export default function AmazonDashboard() {
   };
 
   // --- 3. 數據加工 (Aggregation) ---
-  // 第一階段：將原始資料聚合為「每日圖表數據」與「產品列表總數據」
   const { chartData, kpi, allProductsAggregated } = useMemo(() => {
     if (!rawData.length) return { chartData: [], kpi: {}, allProductsAggregated: [] };
 
@@ -58,7 +57,7 @@ export default function AmazonDashboard() {
     let totalSessions = 0;
 
     rawData.forEach(row => {
-      // A. 每日加總 (圖表用)
+      // A. 每日加總
       const d = row.date;
       if (!dailyMap.has(d)) {
         dailyMap.set(d, { date: d, sales: 0, units: 0, sessions: 0 });
@@ -68,12 +67,15 @@ export default function AmazonDashboard() {
       day.units += (row.units_sold || 0);
       day.sessions += (row.sessions || 0);
 
-      // B. 商品加總 (表格用)
+      // B. 商品加總
       const asin = row.asin;
       if (!productMap.has(asin)) {
         productMap.set(asin, { 
           asin, 
           title: row.amazon_products?.title || asin,
+          // 🟢 新增欄位
+          channel: row.amazon_products?.fulfillment_channel || 'N/A',
+          inventory: row.amazon_products?.inventory_quantity || 0,
           sales: 0, 
           units: 0,
           sessions: 0,
@@ -86,7 +88,7 @@ export default function AmazonDashboard() {
       prod.sessions += (row.sessions || 0);
       prod.page_views += (row.page_views || 0);
 
-      // C. 全局加總 (KPI用)
+      // C. 全局加總
       totalSales += (row.total_sales || 0);
       totalUnits += (row.units_sold || 0);
       totalSessions += (row.sessions || 0);
@@ -99,7 +101,7 @@ export default function AmazonDashboard() {
 
     return {
       chartData: sortedChart,
-      allProductsAggregated: allProducts, // 這裡回傳所有產品，不做切片
+      allProductsAggregated: allProducts,
       kpi: {
         sales: totalSales.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
         units: totalUnits.toLocaleString(),
@@ -111,11 +113,10 @@ export default function AmazonDashboard() {
 
   // --- 4. 列表邏輯 (搜尋 -> 排序 -> 分頁) ---
   
-  // A. 處理搜尋與排序
   const processedProducts = useMemo(() => {
     let data = [...allProductsAggregated];
 
-    // 搜尋 (Search)
+    // 搜尋
     if (searchText) {
       const lowerText = searchText.toLowerCase();
       data = data.filter(p => 
@@ -124,11 +125,18 @@ export default function AmazonDashboard() {
       );
     }
 
-    // 排序 (Sort)
+    // 排序
     if (sortConfig.key) {
       data.sort((a, b) => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
+        
+        // 處理字串與數字排序
+        if (typeof aValue === 'string') {
+            return sortConfig.direction === 'asc' 
+                ? aValue.localeCompare(bValue) 
+                : bValue.localeCompare(aValue);
+        }
 
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -139,32 +147,28 @@ export default function AmazonDashboard() {
     return data;
   }, [allProductsAggregated, searchText, sortConfig]);
 
-  // B. 處理分頁 (Pagination)
+  // 分頁
   const totalPages = Math.ceil(processedProducts.length / pageSize);
   const paginatedProducts = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return processedProducts.slice(start, start + pageSize);
   }, [processedProducts, currentPage]);
 
-  // 當搜尋條件改變時，重置回第一頁
   useEffect(() => {
     setCurrentPage(1);
   }, [searchText]);
 
-  // 排序處理函式
   const handleSort = (key) => {
     let direction = 'desc';
-    // 如果點擊相同欄位，且原本是 desc，則切換為 asc
     if (sortConfig.key === key && sortConfig.direction === 'desc') {
       direction = 'asc';
     }
     setSortConfig({ key, direction });
   };
 
-  // 排序箭頭元件
   const SortIcon = ({ columnKey }) => {
-    if (sortConfig.key !== columnKey) return <span className="text-slate-300 ml-1">↕</span>;
-    return sortConfig.direction === 'asc' ? <span className="ml-1 text-indigo-600">↑</span> : <span className="ml-1 text-indigo-600">↓</span>;
+    if (sortConfig.key !== columnKey) return <span className="text-slate-300 ml-1 text-[10px]">↕</span>;
+    return sortConfig.direction === 'asc' ? <span className="ml-1 text-indigo-600 text-[10px]">▲</span> : <span className="ml-1 text-indigo-600 text-[10px]">▼</span>;
   };
 
   return (
@@ -202,7 +206,6 @@ export default function AmazonDashboard() {
 
       {/* Charts */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* 銷售趨勢圖 */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-700 mb-4">銷售趨勢 (Sales & Units)</h3>
           <div className="h-64 w-full">
@@ -227,7 +230,6 @@ export default function AmazonDashboard() {
           </div>
         </div>
 
-        {/* 流量趨勢圖 */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-700 mb-4">流量趨勢 (Sessions)</h3>
           <div className="h-64 w-full">
@@ -245,12 +247,11 @@ export default function AmazonDashboard() {
         </div>
       </div>
 
-      {/* Product Table Section */}
+      {/* Table Section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
           <h3 className="font-bold text-slate-700">商品銷售報表</h3>
           
-          {/* 搜尋框 */}
           <div className="relative w-full sm:w-72">
             <input
               type="text"
@@ -269,21 +270,26 @@ export default function AmazonDashboard() {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-500 font-medium">
               <tr>
-                {/* 可排序的表頭 */}
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => handleSort('title')}>
-                  商品資訊 (ASIN / Title) <SortIcon columnKey="title" />
+                  商品資訊 <SortIcon columnKey="title" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => handleSort('sessions')}>
-                  曝光 (Sessions) <SortIcon columnKey="sessions" />
+                <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('channel')}>
+                  配送 <SortIcon columnKey="channel" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => handleSort('page_views')}>
-                  點擊 (Views) <SortIcon columnKey="page_views" />
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('inventory')}>
+                  庫存 <SortIcon columnKey="inventory" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => handleSort('units')}>
-                  銷售數量 <SortIcon columnKey="units" />
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('sessions')}>
+                  曝光 <SortIcon columnKey="sessions" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none" onClick={() => handleSort('sales')}>
-                  銷售金額 <SortIcon columnKey="sales" />
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('page_views')}>
+                  點擊 <SortIcon columnKey="page_views" />
+                </th>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('units')}>
+                  銷量 <SortIcon columnKey="units" />
+                </th>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('sales')}>
+                  金額 <SortIcon columnKey="sales" />
                 </th>
               </tr>
             </thead>
@@ -293,6 +299,16 @@ export default function AmazonDashboard() {
                   <td className="px-6 py-3 max-w-xs truncate" title={p.title}>
                     <div className="font-medium text-slate-700">{p.asin}</div>
                     <div className="text-slate-400 text-xs truncate">{p.title}</div>
+                  </td>
+                  <td className="px-6 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                        p.channel === 'FBA' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                        {p.channel}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3 text-right font-mono text-slate-700">
+                    {p.inventory}
                   </td>
                   <td className="px-6 py-3 text-right text-slate-600">
                     {p.sessions?.toLocaleString() || 0}
@@ -308,7 +324,7 @@ export default function AmazonDashboard() {
               ))}
               {paginatedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
                     {loading ? '載入數據中...' : '無符合條件的商品'}
                   </td>
                 </tr>
@@ -317,7 +333,7 @@ export default function AmazonDashboard() {
           </table>
         </div>
 
-        {/* 分頁控制區 */}
+        {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-slate-100">
             <div className="text-sm text-slate-500">
@@ -349,7 +365,6 @@ export default function AmazonDashboard() {
   );
 }
 
-// 小元件：KPI 卡片
 function KPICard({ title, value, color }) {
   return (
     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
