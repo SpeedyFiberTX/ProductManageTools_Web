@@ -68,15 +68,19 @@ export default function AmazonDashboard() {
       if (!productMap.has(asin)) {
         productMap.set(asin, { 
           asin, 
-          sku: row.amazon_products?.sku || '',
+          // sku: row.amazon_products?.sku || '', // 不顯示 SKU 了
           title: row.amazon_products?.title || asin,
           sales: 0, 
-          units: 0 
+          units: 0,
+          sessions: 0,   // ✅ 新增：初始化 sessions
+          page_views: 0  // ✅ 新增：初始化 page_views
         });
       }
       const prod = productMap.get(asin);
       prod.sales += (row.total_sales || 0);
       prod.units += (row.units_sold || 0);
+      prod.sessions += (row.sessions || 0);     // ✅ 新增：累加 sessions
+      prod.page_views += (row.page_views || 0); // ✅ 新增：累加 page_views
 
       // C. 全局加總
       totalSales += (row.total_sales || 0);
@@ -191,7 +195,10 @@ export default function AmazonDashboard() {
             <thead className="bg-slate-50 text-slate-500 font-medium">
               <tr>
                 <th className="px-6 py-3">商品資訊 (ASIN / Title)</th>
-                <th className="px-6 py-3">SKU</th>
+                {/* ❌ 移除 SKU */}
+                {/* ✅ 新增 曝光 與 點擊 */}
+                <th className="px-6 py-3 text-right">曝光 (Sessions)</th>
+                <th className="px-6 py-3 text-right">點擊 (Views)</th>
                 <th className="px-6 py-3 text-right">銷售數量</th>
                 <th className="px-6 py-3 text-right">銷售金額</th>
               </tr>
@@ -203,7 +210,14 @@ export default function AmazonDashboard() {
                     <div className="font-medium text-slate-700">{p.asin}</div>
                     <div className="text-slate-400 text-xs truncate">{p.title}</div>
                   </td>
-                  <td className="px-6 py-3 text-slate-600">{p.sku || '-'}</td>
+                  {/* ❌ 移除 SKU 資料格 */}
+                  {/* ✅ 新增 曝光 與 點擊 資料格 */}
+                  <td className="px-6 py-3 text-right text-slate-600">
+                    {p.sessions?.toLocaleString() || 0}
+                  </td>
+                  <td className="px-6 py-3 text-right text-slate-600">
+                    {p.page_views?.toLocaleString() || 0}
+                  </td>
                   <td className="px-6 py-3 text-right font-medium text-blue-600">{p.units}</td>
                   <td className="px-6 py-3 text-right font-medium text-emerald-600">
                     {p.sales.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
@@ -212,7 +226,8 @@ export default function AmazonDashboard() {
               ))}
               {topProducts.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400">
+                  {/* 注意這裡的 colSpan 要改成 5，因為現在有 5 個欄位 */}
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
                     {loading ? '載入數據中...' : '此區間無銷售數據'}
                   </td>
                 </tr>
