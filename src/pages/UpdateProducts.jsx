@@ -7,7 +7,7 @@ import SeoSetting from "../component/SeoSetting";
 import ProductSetting from "../component/ProductSetting";
 import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
-import UpdateButtonRow from "../component/updateButtonRow";
+import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";

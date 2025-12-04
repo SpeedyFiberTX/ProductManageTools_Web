@@ -9,7 +9,7 @@ import Metafields_Content from "../component/Metafields_Content";
 import Metafields_Table from "../component/Metafields_Table";
 import Metafields_Filter from "../component/Metafields_Filter";
 import Metafields_Theme from "../component/Metafields_Theme";
-import UpdateButtonRow from "../component/updateButtonRow";
+import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
