@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import Papa from "papaparse";
 
-import { LENGTH_TABLE } from "../../data/length_table";
+import { LENGTH_TABLE } from "../../data/LENGTH_TABLE";
 import { CONNECTOR_PRICES } from "../../data/CONNECTOR_PRICES";
 import { CABLE_PRICES } from "../../data/CABLE_PRICES";
 
