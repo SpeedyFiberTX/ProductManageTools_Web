@@ -12,13 +12,16 @@ import UpdateProducts from "./pages/UpdateProducts";
 import UpdateRelativeProducts from "./pages/UpdateRelativeProducts";
 import UpdateTranslation from "./pages/UpdateTranslation";
 import UpdateVariants from "./pages/UpdateVariants";
-import DeleteTranslate from "./pages/DeleteTranslate"; // 注意檔名大小寫，原檔可能是 deleteTranslate
+import DeleteTranslate from "./pages/DeleteTranslate";
 import BackupPage from "./pages/BackupPage";
 import Setup2FA from "./pages/Setup2FA";
 
-// 🟢 Amazon Pages (新增)
+// Amazon Pages
 import AmazonDashboard from "./pages/amazon/Dashboard";
 import AmazonUpload from "./pages/amazon/Upload";
+
+// Tools Pages
+import Tools from "./pages/tools/Tools";
 
 // 公開頁
 import LoginPage from "./pages/Login";
@@ -26,7 +29,7 @@ import NotFound from "./pages/NotFound";
 
 // Auth & Context
 import RequireAuth from "./auth/RequireAuth";
-import { PlatformProvider } from "./stores/PlatformContext"; // 🟢 引入 PlatformContext
+import { PlatformProvider } from "./stores/PlatformContext";
 
 export const route = createBrowserRouter(
   [
@@ -62,6 +65,8 @@ export const route = createBrowserRouter(
             // === 🟢 Amazon Routes (新增) ===
             { path: "amazon/dashboard", element: <AmazonDashboard /> },
             { path: "amazon/upload", element: <AmazonUpload /> },
+            // Tools Routes
+            { path: "tools", element: <Tools></Tools> },
           ],
         },
       ],

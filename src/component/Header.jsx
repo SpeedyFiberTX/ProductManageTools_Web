@@ -20,10 +20,14 @@ const AMAZON_NAV = [
   { label: "📥 匯入報表", to: "/amazon/upload" },
 ];
 
+const TOOLS_NAV = [
+  { label: "價格小工具", to: "/tools" },
+];
+
 export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   // 使用 Context 取得當前平台狀態
   const { platform, setPlatform } = usePlatform();
 
@@ -38,31 +42,36 @@ export default function Header() {
     const newPlatform = e.target.value;
     setPlatform(newPlatform);
     // 切換後導向該平台的首頁
-    navigate(newPlatform === 'shopify' ? '/' : '/amazon/dashboard');
+    navigate(newPlatform === 'shopify'
+      ? '/'
+      : newPlatform === 'amazon'
+        ? '/amazon/dashboard'
+        : '/tools');
   };
 
   // 根據平台決定顯示哪個選單
-  const navItems = platform === 'shopify' ? SHOPIFY_NAV : AMAZON_NAV;
+  const navItems = platform === 'shopify' ? SHOPIFY_NAV : platform === 'amazon' ?AMAZON_NAV : TOOLS_NAV;
 
   // 樣式設定：Amazon 模式使用淡橘色背景以示區別
-  const headerClass = platform === 'shopify' 
+  const headerClass = platform === 'shopify'
     ? "sticky top-0 z-40 w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-slate-200/60"
     : "sticky top-0 z-40 w-full bg-orange-50/90 backdrop-blur supports-[backdrop-filter]:bg-orange-50/60 border-b border-orange-200/60";
 
   return (
     <header className={headerClass}>
       <div className="container mx-auto px-4 flex items-center justify-between">
-        
+
         {/* 左側：平台切換器 */}
         <div className="flex items-center gap-3 mr-4 border-r border-slate-300 pr-4 py-3">
-            <select 
-                value={platform} 
-                onChange={handlePlatformChange}
-                className="bg-transparent font-bold text-slate-700 cursor-pointer outline-none hover:text-indigo-600 transition text-sm"
-            >
-                <option value="shopify">🛍️ Shopify</option>
-                <option value="amazon">📦 Amazon</option>
-            </select>
+          <select
+            value={platform}
+            onChange={handlePlatformChange}
+            className="bg-transparent font-bold text-slate-700 cursor-pointer outline-none hover:text-indigo-600 transition text-sm"
+          >
+            <option value="shopify">🛍️ Shopify</option>
+            <option value="amazon">📦 Amazon</option>
+            <option value="tools">🔨 Tools</option>
+          </select>
         </div>
 
         {/* 中間：導航選單 */}
@@ -81,8 +90,8 @@ export default function Header() {
                       ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
                       : "bg-indigo-600 text-white border-indigo-600 shadow-sm"
                     : isYellow
-                    ? "bg-gray-500 text-white border-slate-200 hover:bg-gray-600"
-                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-200")
+                      ? "bg-gray-500 text-white border-slate-200 hover:bg-gray-600"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-200")
                 }
               >
                 {label}
