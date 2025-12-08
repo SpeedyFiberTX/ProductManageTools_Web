@@ -1,5 +1,5 @@
 export default function Tools(){
     return(
-        <h2>工具</h2>
+        <h2>工具頁面</h2>
     )
 }
