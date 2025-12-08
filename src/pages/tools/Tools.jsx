@@ -49,7 +49,7 @@ const CONNECTOR_PRICES = {
 // === 線材每米單價（Cable with Corning fiber，USD / meter） ===
 // key: Jacket -> FiberType(Simplex/Duplex/Round) -> FiberMode(SM/M1~M5)
 const CABLE_PRICES = {
-  // 第一組：應該是 OFNR ClearCurve
+  // 第一組：OFNR ClearCurve
   OFNR: {
     Simplex: {
       SM: 0.06,
@@ -89,14 +89,14 @@ const CABLE_PRICES = {
     Duplex: {
       SM: 0.44,
       M1: 0.56,
-      M2: 0.50,
+      M2: 0.5,
       M3: 0.54,
-      M4: 0.70,
+      M4: 0.7,
       M5: 1.36,
     },
     Round: {
       SM: 0.21,
-      M1: 0.40,
+      M1: 0.4,
       M2: 0.27,
       M3: 0.29,
       M4: 0.44,
@@ -108,17 +108,17 @@ const CABLE_PRICES = {
     Simplex: {
       SM: 0.06,
       M1: 0.15,
-      M2: 0.10,
+      M2: 0.1,
       M3: 0.12,
-      M4: 0.20,
+      M4: 0.2,
       M5: 0.52,
     },
     Duplex: {
       SM: 0.12,
-      M1: 0.30,
-      M2: 0.20,
+      M1: 0.3,
+      M2: 0.2,
       M3: 0.24,
-      M4: 0.40,
+      M4: 0.4,
       M5: 1.04,
     },
     Round: {
@@ -256,7 +256,7 @@ function getConnectorUnitPrice(connector, fiberMode, polish, lowloss) {
   if (!connector || !polish) return 0;
 
   const modeKey = fiberMode === "SM" ? "SM" : "MM";
-  const polishKey = polish === "APC" ? "APC" : "PC"; // PC=UPC
+  const polishKey = polish === "APC" ? "APC" : "PC"; // PC = UPC
   const gradeKey = lowloss === "0.2" || !lowloss ? "0.2" : "0.1-0.15";
 
   const cfgConnector = CONNECTOR_PRICES[connector];
@@ -294,15 +294,20 @@ function getCablePricePerMeter(jacket, fiberType, fiberMode) {
   return price || 0;
 }
 
-// 🔧 新增：把實際長度換成計價長度（往上取 0.5 m 級距）
+// ✅ 把實際長度換成計價長度（每 0.5 m 往上取整）
 function getBillingLength(meters) {
   if (!meters || meters <= 0) return 0;
-  // 例如：1.21 → ceil(1.21 * 2) / 2 = ceil(2.42) / 2 = 1.5
-  //      1.52 → ceil(1.52 * 2) / 2 = ceil(3.04) / 2 = 2
-  return Math.ceil(meters * 2) / 2;
+
+  const STEP = 0.5;
+
+  // 先把原始長度四捨五入到小數三位，避免 1.209999 這種浮點數誤差
+  const normalized = Math.round(meters * 1000) / 1000;
+
+  // 再用 0.5 m 級距往上取整
+  return Math.ceil(normalized / STEP) * STEP;
 }
 
-// ✅ 修改後：計算線材費用
+// 計算線材費用
 function calculateCableCost(meters, selections) {
   const jacket = selections.jacket;
   const fiberType = selections.fiberType;
@@ -327,7 +332,7 @@ function calculateConnectorAndLabor(selections) {
   const lowloss = selections.lowloss || "0.2";
 
   const duplex = isDuplexPatch(fiberType, connectorA, connectorB);
-  const connectorsPerEnd = duplex ? 2 : 1; // 單工=1 雙工=2
+  const connectorsPerEnd = duplex ? 2 : 1; // 單工 = 1, 雙工 = 2
   const totalConnectors = connectorsPerEnd * 2; // 兩端
 
   // 每端的單顆接頭材料費
