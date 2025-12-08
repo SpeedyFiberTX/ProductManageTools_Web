@@ -9,7 +9,6 @@
     "postbuild": "node scripts/generate-404.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    // "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",
