@@ -536,7 +536,7 @@ export default function Tools() {
 
             {/* 右側：結果區 */}
             <main className="flex-1 p-6">
-                <h1 className="mb-4 text-2xl font-bold">工具頁面</h1>
+                <h1 className="mb-4 text-2xl font-bold">常規跳線成本計算工具</h1>
 
                 {/* ⚠ 不合法組合提示 */}
                 {warnings.length > 0 && (

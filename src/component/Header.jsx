@@ -21,7 +21,7 @@ const AMAZON_NAV = [
 ];
 
 const TOOLS_NAV = [
-  { label: "價格查詢小工具", to: "/tools" },
+  { label: "常規跳線成本計算工具", to: "/tools" },
 ];
 
 export default function Header() {
