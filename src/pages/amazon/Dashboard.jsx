@@ -315,8 +315,12 @@ export default function AmazonDashboard() {
               {paginatedProducts.map((p) => (
                 <tr key={p.asin} className="hover:bg-slate-50 transition group">
                   <td className="px-6 py-3 max-w-xs" title={p.title}>
-                    <div className="font-medium text-slate-700 group-hover:text-indigo-600 transition">{p.asin}</div>
-                    <div className="text-slate-400 text-xs truncate">{p.title}</div>
+                    <div
+                      className="text-slate-400 text-xs overflow-auto whitespace-nowrap overflow-hidden hover:overflow-auto "
+                      title={p.title}  // 滑鼠移上去會看到完整標題
+                    >
+                      {p.title}
+                    </div>
                   </td>
 
                   <td className="px-6 py-3 text-right font-mono text-slate-700">
