@@ -319,7 +319,7 @@ export default function AmazonDashboard() {
                       className="text-slate-400 text-xs overflow-auto whitespace-nowrap overflow-hidden hover:overflow-auto "
                       title={p.title}  // 滑鼠移上去會看到完整標題
                     >
-                      {p.title}
+                      <span className='font-bold text-sm'>{p.asin}</span><br/>{p.title}
                     </div>
                   </td>
 
