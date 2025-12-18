@@ -5,8 +5,11 @@ import { LENGTH_TABLE } from "../../data/LENGTH_TABLE";
 import { CONNECTOR_PRICES } from "../../data/CONNECTOR_PRICES";
 import { CABLE_PRICES } from "../../data/CABLE_PRICES";
 
-// 台灣廠工費（per connector）
-const LABOR_PER_CONNECTOR_TW = 0.74;
+// 工費（per connector）
+const LABOR_PER_CONNECTOR = {
+    TW: 0.74,
+    TJ: 0.44,
+};
 
 /* ----------------------------------
    檢查接頭是否有合法單價
@@ -229,6 +232,10 @@ function calculateConnectorAndLabor(selections) {
     const fiberType = selections.fiberType || "Simplex";
     const lowloss = selections.lowloss || "0.2";
 
+    // 新增：出貨地點（預設台灣）
+    const shipFrom = selections.shipFrom || "TW";
+    const laborUnit = LABOR_PER_CONNECTOR[shipFrom] ?? LABOR_PER_CONNECTOR.TW;
+
     // 單顆材料單價
     const unitA = getConnectorUnitPrice(connectorA, fiberMode, polishA, lowloss);
     const unitB = getConnectorUnitPrice(connectorB, fiberMode, polishB, lowloss);
@@ -246,7 +253,7 @@ function calculateConnectorAndLabor(selections) {
         unitB * materialB;
 
     const totalLaborConnectors = laborA + laborB;
-    const laborCost = totalLaborConnectors * LABOR_PER_CONNECTOR_TW;
+    const laborCost = totalLaborConnectors * laborUnit;
 
     return {
         connectorCost,
@@ -255,6 +262,8 @@ function calculateConnectorAndLabor(selections) {
         // 如果之後想 debug/顯示可以用：
         materialConnectors: materialA + materialB,
         laborConnectors: totalLaborConnectors,
+        shipFrom,
+        laborUnit,
     };
 }
 
@@ -352,6 +361,20 @@ export default function Tools() {
                     <h2 className="mb-4 text-lg font-semibold">工具篩選條件</h2>
 
                     <form ref={formRef} className="space-y-4">
+                        <div className="flex flex-col text-left">
+                            <label htmlFor="shipFrom" className="mb-1 text-sm font-medium">
+                                Ship From
+                            </label>
+                            <select
+                                name="shipFrom"
+                                id="shipFrom"
+                                className="bg-white p-2 rounded shadow border"
+                                defaultValue="TW"
+                            >
+                                <option value="TW">Taiwan (Labor $0.74/connector)</option>
+                                <option value="TJ">Tianjin (Labor $0.44/connector)</option>
+                            </select>
+                        </div>
                         {/* Connector A */}
                         <div className="flex flex-col text-left">
                             <label
