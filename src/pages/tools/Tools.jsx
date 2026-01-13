@@ -10,6 +10,11 @@ const LABOR_PER_CONNECTOR = {
     TW: 0.74,
     TJ: 0.44,
 };
+// 台幣匯率
+const USD_TO_TWD = 32;
+// PChome
+const PCHOME_MULTIPLIER = 1.4;
+
 
 /* ----------------------------------
    檢查接頭是否有合法單價
@@ -301,11 +306,16 @@ export default function Tools() {
             const cableCost = calculateCableCost(item.meters, selections);
             const totalPrice = calculatePrice(item.meters, selections);
 
+            const totalPriceTWD = totalPrice * USD_TO_TWD;
+            const pchomePrice = totalPriceTWD * PCHOME_MULTIPLIER;
+
             return {
                 meters: item.meters,
                 label: item.label,
                 cableCost,
                 totalPrice,
+                totalPriceTWD: Math.round(totalPriceTWD),
+                pchomePrice: Math.round(pchomePrice),
             };
         });
 
@@ -329,6 +339,8 @@ export default function Tools() {
             length_label: row.label,
             cable_price_usd: row.cableCost.toFixed(3), // 線材價格
             total_price_usd: row.totalPrice.toFixed(2), // 總價
+            total_price_twd: Math.round(row.totalPrice * USD_TO_TWD),
+            pchomePrice: Math.round(row.pchomePrice),
         }));
 
         const csv = Papa.unparse(data);
@@ -636,6 +648,10 @@ export default function Tools() {
                                         <th className="border px-3 py-2 text-right">
                                             Total Price (USD)
                                         </th>
+                                        <th className="border px-3 py-2 text-right">
+                                            Total Price (TWD)
+                                        </th>
+                                        <th className="border px-3 py-2 text-right">PChome 售價</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -647,6 +663,12 @@ export default function Tools() {
                                             </td>
                                             <td className="border px-3 py-1 text-right">
                                                 {row.totalPrice.toFixed(2)} USD
+                                            </td>
+                                            <td className="border px-3 py-1 text-right">
+                                                {row.totalPriceTWD.toLocaleString()} TWD
+                                            </td>
+                                            <td className="border px-3 py-1 text-right">
+                                                {row.pchomePrice.toLocaleString()} TWD
                                             </td>
                                         </tr>
                                     ))}

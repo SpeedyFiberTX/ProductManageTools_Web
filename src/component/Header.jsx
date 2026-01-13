@@ -22,6 +22,7 @@ const AMAZON_NAV = [
 
 const TOOLS_NAV = [
   { label: "常規跳線成本計算工具", to: "/tools" },
+  // { label: "Amazon 文案產生器", to: "/amazon_content" },
 ];
 
 export default function Header() {
