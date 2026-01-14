@@ -23,6 +23,7 @@ const AMAZON_NAV = [
 const TOOLS_NAV = [
   { label: "常規跳線成本計算工具", to: "/tools" },
   // { label: "Amazon 文案產生器", to: "/amazon_content" },
+  {label: "官網價格查詢",to:"/shopify_price"}
 ];
 
 export default function Header() {

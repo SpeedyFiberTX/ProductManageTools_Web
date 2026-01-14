@@ -23,6 +23,7 @@ import AmazonUpload from "./pages/amazon/Upload";
 // Tools Pages
 import Tools from "./pages/tools/Tools";
 // import AmazonContent from "./pages/tools/AmazonContent";
+import ShopifyPrice from "./pages/tools/ShopifyPrice";
 
 // 公開頁
 import LoginPage from "./pages/Login";
@@ -68,6 +69,7 @@ export const route = createBrowserRouter(
             { path: "amazon/upload", element: <AmazonUpload /> },
             // Tools Routes
             { path: "tools", element: <Tools></Tools> },
+            { path: "shopify_price", element: <ShopifyPrice></ShopifyPrice> },
             // { path: "amazon_content", element: <AmazonContent></AmazonContent> },
           ],
         },
