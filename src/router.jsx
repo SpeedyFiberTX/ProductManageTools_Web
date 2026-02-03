@@ -10,6 +10,7 @@ import UpdateInventory from "./pages/UpdateInventory";
 import UpdateMetafields from "./pages/UpdateMetafields";
 import UpdateProducts from "./pages/UpdateProducts";
 import UpdateRelativeProducts from "./pages/UpdateRelativeProducts";
+import MatchMedia from "./pages/MatchMedia";
 import UpdateTranslation from "./pages/UpdateTranslation";
 import UpdateVariants from "./pages/UpdateVariants";
 import DeleteTranslate from "./pages/DeleteTranslate";
@@ -58,6 +59,7 @@ export const route = createBrowserRouter(
             { path: "update_metafields", element: <UpdateMetafields /> },
             { path: "update_products", element: <UpdateProducts /> },
             { path: "update_relative_products", element: <UpdateRelativeProducts /> },
+            { path: "match_media", element: <MatchMedia /> },
             { path: "update_translation", element: <UpdateTranslation /> },
             { path: "update_variants", element: <UpdateVariants /> },
             { path: "delete_translate", element: <DeleteTranslate /> },
