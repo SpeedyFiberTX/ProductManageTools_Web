@@ -11,6 +11,7 @@ import UpdateMetafields from "./pages/UpdateMetafields";
 import UpdateProducts from "./pages/UpdateProducts";
 import UpdateRelativeProducts from "./pages/UpdateRelativeProducts";
 import MatchMedia from "./pages/MatchMedia";
+import HandleChange from "./pages/HandleChange";
 import UpdateTranslation from "./pages/UpdateTranslation";
 import UpdateVariants from "./pages/UpdateVariants";
 import DeleteTranslate from "./pages/DeleteTranslate";
@@ -60,6 +61,7 @@ export const route = createBrowserRouter(
             { path: "update_products", element: <UpdateProducts /> },
             { path: "update_relative_products", element: <UpdateRelativeProducts /> },
             { path: "match_media", element: <MatchMedia /> },
+            { path: "handle_change", element: <HandleChange /> },
             { path: "update_translation", element: <UpdateTranslation /> },
             { path: "update_variants", element: <UpdateVariants /> },
             { path: "delete_translate", element: <DeleteTranslate /> },

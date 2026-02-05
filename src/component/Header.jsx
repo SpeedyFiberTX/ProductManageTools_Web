@@ -12,6 +12,7 @@ const SHOPIFY_NAV = [
   { label: "更新翻譯", to: "/update_translation" },
   { label: "更新關聯產品", to: "/update_relative_products" },
   { label: "批次匹配VSFF照片", to: "/match_media" },
+  { label: "批次變更 Handle", to: "/handle_change" },
   { label: "系統備份", to: "/backup" }
 ];
 
