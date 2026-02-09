@@ -14,7 +14,7 @@ function joinURL(base: string, path: string) {
 }
 
 export function useApi() {
-  const { ready } = useAuth();
+  const { ready, accessToken } = useAuth(); // Retrieve accessToken
 
   async function rawFetch(path: string, init: RequestInit = {}) {
     const url = joinURL(API_BASE, path);
@@ -24,6 +24,11 @@ export function useApi() {
     // 若 body 不是 FormData 才自動加 JSON header
     if (hasBody && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
+    }
+
+    // Add Authorization header if accessToken is available and not already set
+    if (accessToken && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
     }
 
     return fetch(url, {

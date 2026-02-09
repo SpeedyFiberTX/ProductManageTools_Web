@@ -93,6 +93,7 @@ const METAFIELDS_FIELDS = [
   ["#Body Type", "filter.bodyType"],
   ["#Gender", "filter.gender"],
   ["#TAA", "filter.taa"],
+  ["權重", "filter.weight"],
   // Compatibility Brand
   ["Compatibility", "custom.compatibility"],
   // Theme

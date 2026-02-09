@@ -176,6 +176,14 @@ export default function Metafields_Filter({ currentRow, canEdit, isChecked, togg
                         selectKeys={["filter.taa"]}
                         isChecked={isChecked(["filter.taa"])}
                         onToggle={toggleSelected} />
+                    <CardContent
+                        row={currentRow}
+                        title="權重"
+                        field="權重"
+                        canEdit={canEdit}
+                        selectKeys={["filter.weight"]}
+                        isChecked={isChecked(["filter.weight"])}
+                        onToggle={toggleSelected} />
                 </div>
             </div>
         </div>

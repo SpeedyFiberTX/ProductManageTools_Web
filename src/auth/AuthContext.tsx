@@ -17,12 +17,14 @@ type AuthContextType = {
   logout: () => Promise<void>;
   reloadUser: () => Promise<void>;
   ready: boolean;
+  accessToken: string | null;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null); // Add this line
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -72,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return data; 
     }
 
-    await loadMe();
+    setUser(data.user);
+    setAccessToken(data.access_token); // Set accessToken from response
     return data;
   }
 
@@ -86,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Verification failed');
     
-    await loadMe();
+    setUser(data.user);
+    setAccessToken(data.access_token); // Set accessToken from response
   }
 
   async function logout() {
@@ -98,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, login2FA, logout, reloadUser: loadMe, ready }}>
+    <AuthContext.Provider value={{ user, login, login2FA, logout, reloadUser: loadMe, ready, accessToken }}>
       {children}
     </AuthContext.Provider>
   );

@@ -15,7 +15,8 @@ import HandleChange from "./pages/HandleChange";
 import UpdateTranslation from "./pages/UpdateTranslation";
 import UpdateVariants from "./pages/UpdateVariants";
 import DeleteTranslate from "./pages/DeleteTranslate";
-import BackupPage from "./pages/BackupPage";
+import BackupV2 from "./pages/BackupV2";
+import BackupDetail from "./pages/BackupDetail";
 import Setup2FA from "./pages/Setup2FA";
 
 // Amazon Pages
@@ -65,7 +66,8 @@ export const route = createBrowserRouter(
             { path: "update_translation", element: <UpdateTranslation /> },
             { path: "update_variants", element: <UpdateVariants /> },
             { path: "delete_translate", element: <DeleteTranslate /> },
-            { path: "backup", element: <BackupPage /> },
+            { path: "backup_v2", element: <BackupV2 /> },
+            { path: "backup_v2/:id", element: <BackupDetail /> },
             { path: "setup_2fa", element: <Setup2FA /> },
 
             // === 🟢 Amazon Routes (新增) ===
