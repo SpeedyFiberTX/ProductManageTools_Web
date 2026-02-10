@@ -77,7 +77,8 @@ export default function AmazonDashboard() {
           title: row.amazon_products?.title || asin,
           // 🟢 確保欄位存在，否則給預設值
           channel: row.amazon_products?.fulfillment_channel || 'N/A',
-          inventory: row.amazon_products?.inventory_quantity || 0,
+          fba_inventory: row.amazon_products?.inventory_quantity || 0,
+          fbm_inventory: row.amazon_products?.fbm_quantity || 0,
           sales: 0,
           units: 0,
           sessions: 0,
@@ -293,8 +294,11 @@ export default function AmazonDashboard() {
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none w-[35%]" onClick={() => handleSort('title')}>
                   商品資訊 (ASIN / Title) <SortIcon columnKey="title" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('inventory')}>
-                  庫存 <SortIcon columnKey="inventory" />
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('fba_inventory')}>
+                  FBA庫存 <SortIcon columnKey="fba_inventory" />
+                </th>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('fbm_inventory')}>
+                  FBM庫存 <SortIcon columnKey="fbm_inventory" />
                 </th>
                 <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('sessions')}>
                   Sessions <SortIcon columnKey="sessions" />
@@ -324,7 +328,11 @@ export default function AmazonDashboard() {
                   </td>
 
                   <td className="px-6 py-3 text-right font-mono text-slate-700">
-                    {p.inventory}
+                    {p.fba_inventory}
+                  </td>
+
+                  <td className="px-6 py-3 text-right font-mono text-slate-700">
+                    {p.fbm_inventory}
                   </td>
 
                   <td className="px-6 py-3 text-right text-slate-600">
@@ -347,7 +355,7 @@ export default function AmazonDashboard() {
 
               {paginatedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     {loading ? '載入數據中...' : '無符合條件的商品'}
                   </td>
                 </tr>
