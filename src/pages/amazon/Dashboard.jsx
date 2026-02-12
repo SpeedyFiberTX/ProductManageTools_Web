@@ -75,6 +75,7 @@ export default function AmazonDashboard() {
         productMap.set(asin, {
           asin,
           title: row.amazon_products?.title || asin,
+          sku: row.amazon_products?.sku || '',
           // 🟢 確保欄位存在，否則給預設值
           channel: row.amazon_products?.fulfillment_channel || 'N/A',
           fba_inventory: row.amazon_products?.inventory_quantity || 0,
@@ -294,6 +295,9 @@ export default function AmazonDashboard() {
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none w-[35%]" onClick={() => handleSort('title')}>
                   商品資訊 (ASIN / Title) <SortIcon columnKey="title" />
                 </th>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('channel')}>
+                  Channel <SortIcon columnKey="channel" />
+                </th>
                 <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('fba_inventory')}>
                   FBA庫存 <SortIcon columnKey="fba_inventory" />
                 </th>
@@ -323,8 +327,12 @@ export default function AmazonDashboard() {
                       className="text-slate-400 text-xs overflow-auto whitespace-nowrap overflow-hidden hover:overflow-auto "
                       title={p.title}  // 滑鼠移上去會看到完整標題
                     >
-                      <span className='font-bold text-sm'>{p.asin}</span><br/>{p.title}
+                      <span className='font-bold text-sm'>{p.asin}</span><br/>{p.sku}<br/>{p.title}
                     </div>
+                  </td>
+
+                  <td className="px-6 py-3 text-right font-mono text-slate-700">
+                    {p.channel}
                   </td>
 
                   <td className="px-6 py-3 text-right font-mono text-slate-700">
