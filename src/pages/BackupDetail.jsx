@@ -9,7 +9,7 @@ const TABS = [
 ];
 
 export default function BackupDetail() {
-  const { getJson } = useApi();
+  const { getJson, postJson } = useApi();
   const navigate = useNavigate();
   const { id: rawId } = useParams();
   const [tab, setTab] = useState("overview");
@@ -25,6 +25,9 @@ export default function BackupDetail() {
   const [imagePreview, setImagePreview] = useState(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [showRawMetafieldRichText, setShowRawMetafieldRichText] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState("");
+  const [restoreError, setRestoreError] = useState("");
 
   const productId = useMemo(() => {
     if (!rawId) return "";
@@ -35,11 +38,11 @@ export default function BackupDetail() {
     }
   }, [rawId]);
 
-  useEffect(() => {
+  const fetchDetail = async () => {
     if (!productId) return;
     setDetailLoading(true);
     setDetailError("");
-    getJson(`/api/products/${encodeURIComponent(productId)}?full=1`)
+    return getJson(`/api/products/${encodeURIComponent(productId)}?full=1`)
       .then((res) => {
         setDetail(res.item || null);
       })
@@ -48,19 +51,29 @@ export default function BackupDetail() {
         setDetailError(err.message || "載入完整資料失敗");
       })
       .finally(() => setDetailLoading(false));
-  }, [productId]);
+  };
 
-  useEffect(() => {
+  const fetchVersions = async () => {
     if (!productId) return;
     setVersionsLoading(true);
     setVersionsError("");
-    getJson(`/api/products/${encodeURIComponent(productId)}/versions`)
+    return getJson(`/api/products/${encodeURIComponent(productId)}/versions`)
       .then((res) => setVersions(res.items || []))
       .catch((err) => {
         console.error(err);
         setVersionsError(err.message || "載入版本歷史失敗");
       })
       .finally(() => setVersionsLoading(false));
+  };
+
+  useEffect(() => {
+    if (!productId) return;
+    fetchDetail();
+  }, [productId]);
+
+  useEffect(() => {
+    if (!productId) return;
+    fetchVersions();
   }, [productId]);
 
   const stripHtml = (html) => {
@@ -71,6 +84,8 @@ export default function BackupDetail() {
   const selectedVersion = versions.find((v) => String(v.version_id) === String(selectedVersionId));
   const currentData = detail?.data || {};
   const data = selectedVersion?.data || currentData || {};
+  const restoreTargetText =
+    selectedVersionId === "current" ? "Current（目前版本）" : `版本 #${selectedVersionId}`;
   const images = Array.isArray(data.images) ? data.images : [];
   const variants = Array.isArray(data.variants) ? data.variants : [];
   const metafieldsRaw = Array.isArray(data.metafields) ? data.metafields : [];
@@ -249,6 +264,36 @@ export default function BackupDetail() {
     );
   };
 
+  const handleRestore = async () => {
+    if (!productId) return;
+    if (!confirm(`確定要還原到 ${restoreTargetText} 嗎？\n此動作會把 Shopify 上該產品覆蓋成指定版本。`)) return;
+
+    setRestoreLoading(true);
+    setRestoreMessage("");
+    setRestoreError("");
+
+    try {
+      const payload = {
+        version_id: selectedVersionId === "current" ? null : Number(selectedVersionId),
+        applyVariants: true,
+        applyTranslations: true,
+        applyMetafields: true,
+      };
+      const res = await postJson(`/api/products/${encodeURIComponent(productId)}/restore`, payload);
+      const warnings = Array.isArray(res?.result?.warnings) ? res.result.warnings : [];
+      const warnText = warnings.length ? `（警告 ${warnings.length} 項，請看後端 log）` : "";
+      setRestoreMessage((res?.message || "還原完成") + warnText);
+
+      await Promise.all([fetchDetail(), fetchVersions()]);
+      setSelectedVersionId("current");
+    } catch (err) {
+      console.error(err);
+      setRestoreError(err.message || "還原失敗，請稍後再試");
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
+
   return (
     <>
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
@@ -257,13 +302,37 @@ export default function BackupDetail() {
           <h1 className="text-2xl font-bold text-slate-800">產品備份</h1>
           <div className="text-sm text-slate-500 mt-1">ID: {productId || "—"}</div>
         </div>
-        <button
-          onClick={() => navigate("/backup_v2")}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-        >
-          返回列表
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRestore}
+            disabled={restoreLoading || detailLoading || versionsLoading}
+            className={`rounded-lg px-3 py-2 text-sm text-white ${
+              restoreLoading || detailLoading || versionsLoading
+                ? "bg-slate-400 cursor-not-allowed"
+                : "bg-amber-600 hover:bg-amber-700"
+            }`}
+          >
+            {restoreLoading ? "還原中..." : `還原到 ${restoreTargetText}`}
+          </button>
+          <button
+            onClick={() => navigate("/backup_v2")}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            返回列表
+          </button>
+        </div>
       </div>
+
+      {restoreMessage && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {restoreMessage}
+        </div>
+      )}
+      {restoreError && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {restoreError}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-6">
         {TABS.map((t) => (

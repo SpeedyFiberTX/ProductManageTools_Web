@@ -18,6 +18,7 @@ import DeleteTranslate from "./pages/DeleteTranslate";
 import BackupV2 from "./pages/BackupV2";
 import BackupDetail from "./pages/BackupDetail";
 import Setup2FA from "./pages/Setup2FA";
+import UpdateProductsAllFlow from "./pages/UpdateProductsAllFlow";
 
 // Amazon Pages
 import AmazonDashboard from "./pages/amazon/Dashboard";
@@ -69,6 +70,7 @@ export const route = createBrowserRouter(
             { path: "backup_v2", element: <BackupV2 /> },
             { path: "backup_v2/:id", element: <BackupDetail /> },
             { path: "setup_2fa", element: <Setup2FA /> },
+            { path: "update_products_all_flow", element: <UpdateProductsAllFlow></UpdateProductsAllFlow>},
 
             // === 🟢 Amazon Routes (新增) ===
             { path: "amazon/dashboard", element: <AmazonDashboard /> },
