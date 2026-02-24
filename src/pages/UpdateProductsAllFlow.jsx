@@ -15,6 +15,7 @@ import Hero from "../component/Hero";
 import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
+import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
 import { pick } from "../utils/pick";
 
 import { useAuth } from "../auth/AuthContext";
@@ -202,27 +203,19 @@ export default function UpdateProductsAllFlow() {
       // console.log("=== /api/updateProductFlow ===");
       // console.log(JSON.stringify(payload, null, 2));
 
-      const resp = await fetch(`${API_BASE}/api/updateProductFlow`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
+      const { requestId, message } = await postJsonWithResultLog({
+        apiBase: API_BASE,
+        endpoint: "/api/updateProductFlow",
+        accessToken,
+        body: {
           products: productsRows,
           metafields: metafieldsRows,
           translations: translationsRows,
           variants: variantsRows,
-        }),
+        },
+        successMessage: "整批更新流程已啟動，請稍後查看官網後台是否更新成功，並請記得到 notion 修改 status 狀態與官網同步唷。",
       });
-
-      const data = await resp.json().catch(() => ({}));
-      if (resp.ok) {
-        alert(data.message || "整批更新流程已啟動，請稍後查看官網後台是否更新成功，並請記得到 notion 修改 status 狀態與官網同步唷。");
-      } else {
-        alert(`送出失敗：${data.message || "未知錯誤"}`);
-      }
+      await notifyAndOfferResultExport({ apiBase: API_BASE, accessToken, requestId, message });
     } catch (e) {
       console.error("updateProductFlow error:", e);
       alert(`送出失敗：${e.message}`);

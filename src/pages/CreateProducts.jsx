@@ -14,6 +14,7 @@ import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
+import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
 
 import { useAuth } from "../auth/AuthContext";
 
@@ -83,27 +84,19 @@ export default function CreateProducts() {
       // console.log("=== /api/fullPipeline ===");
       // console.log(JSON.stringify(payload, null, 2));
 
-      const resp = await fetch(`${API_BASE}/api/fullPipeline`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
+      const { requestId, message } = await postJsonWithResultLog({
+        apiBase: API_BASE,
+        endpoint: "/api/fullPipeline",
+        accessToken,
+        body: {
           products: productPayloads || [],
           metafields: metafieldPayloads || [],
           translations: translationPayloads || [],
           variants: Array.isArray(variantsActive) ? variantsActive : [],
-        }),
+        },
+        successMessage: "整批建立流程已啟動，請稍後查看官網後台是否建立成功，並請記得到 notion 修改 status 狀態與官網同步唷。",
       });
-
-      const data = await resp.json().catch(() => ({}));
-      if (resp.ok) {
-        alert(data.message || "整批建立流程已啟動，請稍後查看官網後台是否建立成功，並請記得到 notion 修改 status 狀態與官網同步唷。");
-      } else {
-        alert(`送出失敗：${data.message || "未知錯誤"}`);
-      }
+      await notifyAndOfferResultExport({ apiBase: API_BASE, accessToken, requestId, message });
     } catch (e) {
       console.error("fullPipeline error:", e);
       alert(`送出失敗：${e.message}`);

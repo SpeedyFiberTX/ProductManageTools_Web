@@ -24,6 +24,14 @@ function statusClass(status) {
   return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
+function statusLabel(status) {
+  const s = String(status || "").toLowerCase();
+  if (["accepted", "started", "running"].includes(s)) return "進行中";
+  if (s === "success") return "已完成";
+  if (s === "error" || s === "validation_error") return "失敗";
+  return s || "-";
+}
+
 export default function OperationLogs() {
   const api = useApi();
   const [rows, setRows] = useState([]);
@@ -108,6 +116,26 @@ export default function OperationLogs() {
     }
   }
 
+  async function handleExportSingle(requestId) {
+    try {
+      const resp = await api.fetch(`/api/operation-logs/${encodeURIComponent(requestId)}/export.csv`, {
+        method: "GET",
+      });
+      if (!resp.ok) throw new Error(`匯出失敗 (${resp.status})`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `operation-log-${requestId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err?.message || "單筆匯出失敗");
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 md:p-6">
@@ -189,6 +217,7 @@ export default function OperationLogs() {
                 <th className="py-2 pr-3">使用者</th>
                 <th className="py-2 pr-3">耗時</th>
                 <th className="py-2 pr-3">訊息</th>
+                <th className="py-2 pr-3">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -205,8 +234,9 @@ export default function OperationLogs() {
                       <td className="py-2 pr-3 whitespace-nowrap">{fmtTime(row.updatedAt || row.startedAt)}</td>
                       <td className="py-2 pr-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full border text-xs ${statusClass(row.status)}`}>
-                          {row.status || "-"}
+                          {statusLabel(row.status)}
                         </span>
+                        <div className="text-[10px] text-slate-400 mt-1">{row.status || "-"}</div>
                       </td>
                       <td className="py-2 pr-3 whitespace-nowrap">{row.operationKey || "-"}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{row.method} {row.routePath}</td>
@@ -216,10 +246,22 @@ export default function OperationLogs() {
                       <td className="py-2 pr-3 max-w-[360px]">
                         <div className="truncate" title={row.message || ""}>{row.message || "-"}</div>
                       </td>
+                      <td className="py-2 pr-3 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportSingle(row.requestId);
+                          }}
+                          className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-xs"
+                        >
+                          下載 CSV
+                        </button>
+                      </td>
                     </tr>
                     {isOpen && (
                       <tr className="border-b border-slate-100 bg-slate-50/70">
-                        <td colSpan={8} className="p-3">
+                        <td colSpan={9} className="p-3">
                           {detailLoading[row.requestId] ? (
                             <div className="text-sm text-slate-500">載入明細中...</div>
                           ) : (
@@ -280,7 +322,7 @@ export default function OperationLogs() {
               })}
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     尚無紀錄
                   </td>
                 </tr>

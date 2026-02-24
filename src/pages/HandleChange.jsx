@@ -1,15 +1,17 @@
 // src/pages/HandleChange.jsx
 import { useState } from "react";
 import { useCsv } from "../stores/useCsv";
-import { useApi } from "../lib/api";
+import { useAuth } from "../auth/AuthContext";
 import EmptyState from "../component/EmptyState";
 import Hero from "../component/Hero";
 import AsideList from "../component/AsideList";
+import { postJsonWithResultLog, notifyAndOfferResultExport } from "../utils/loggedApiSubmit";
 
 const REQUIRED_COLUMNS = ["Handle", "Old Handle"];
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 export default function HandleChange() {
-  const { postJson } = useApi();
+  const { accessToken } = useAuth();
   const { rows, selectedIndex, setIndex, productPayloads } = useCsv();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,8 +50,14 @@ export default function HandleChange() {
 
     setIsSubmitting(true);
     try {
-      await postJson("/api/handleChangeUpdater", { rows: payload });
-      alert("Handle 變更請求已成功送出。");
+      const { requestId, message } = await postJsonWithResultLog({
+        apiBase: API_BASE,
+        endpoint: "/api/handleChangeUpdater",
+        body: { rows: payload },
+        accessToken,
+        successMessage: "Handle 變更請求已成功送出。",
+      });
+      await notifyAndOfferResultExport({ apiBase: API_BASE, accessToken, requestId, message });
     } catch (error) {
       console.error("Handle change failed:", error);
       alert(`處理失敗： ${error.message}`);

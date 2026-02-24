@@ -11,6 +11,7 @@ import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
+import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
 
 import { useAuth } from "../auth/AuthContext";
 const API_BASE = import.meta.env.VITE_API_BASE;
@@ -112,27 +113,32 @@ export default function UpdateProducts() {
   }
 
   let anySuccess = false;
+  const requestIds = [];
 
   try {
     // 逐一送出（若未來有多分頁，也只彈一次提示）
     for (const s of chosen) {
-      const resp = await fetch(s.endpoint, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({ rows: s.rows }),
+      const { requestId } = await postJsonWithResultLog({
+        apiBase: API_BASE,
+        endpoint: s.endpoint,
+        body: { rows: s.rows },
+        accessToken,
+        successMessage: "資料已送出，您可關閉視窗。",
       });
-
-      if (resp.ok) { // 等同 2xx（包含 200/202）
-        anySuccess = true;
-      }
+      anySuccess = true;
+      if (requestId) requestIds.push(requestId);
     }
 
     if (anySuccess) {
-      alert("資料已送出，您可關閉視窗。");
+      const latestRequestId = requestIds[requestIds.length - 1];
+      await notifyAndOfferResultExport({
+        apiBase: API_BASE,
+        accessToken,
+        requestId: latestRequestId,
+        message: latestRequestId
+          ? `資料已送出，您可關閉視窗。\nrequestId: ${latestRequestId}`
+          : "資料已送出，您可關閉視窗。",
+      });
     } else {
       alert("送出失敗，請稍後再試。");
     }
