@@ -12,9 +12,10 @@ const SHOPIFY_NAV = [
   // { label: "更新翻譯", to: "/update_translation" },
   {label: "更新產品", to: "/update_products_all_flow"},
   { label: "更新關聯產品", to: "/update_relative_products" },
-  { label: "批次匹配VSFF照片", to: "/match_media" },
+  { label: "批次匹配照片", to: "/match_media" },
   { label: "批次變更 Handle", to: "/handle_change" },
-  { label: "新版備份", to: "/backup_v2" }
+  { label: "新版備份", to: "/backup_v2" },
+  { label: "結果紀錄", to: "/operation_logs" }
 ];
 
 // 🟢 定義 Amazon 選單 (新的)

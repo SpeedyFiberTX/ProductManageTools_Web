@@ -5,15 +5,24 @@ import { useApi } from "../lib/api";
 import EmptyState from "../component/EmptyState";
 import Hero from "../component/Hero";
 import AsideList from "../component/AsideList";
-import UpdateButtonRow from "../component/UpdateButtonRow";
 
-const REQUIRED_COLUMNS = ["Handle", "照片關鍵字"];
+const REQUIRED_COLUMNS = ["Handle", "mediaKeyword", "mediaKeyword_type"];
 
 export default function MatchMedia() {
   const { postJson } = useApi();
-  const { rows, selectedIndex, setIndex, productPayloads } = useCsv();
+  const { rows, selectedIndex, setIndex, productPayloads, metafieldPayloads } = useCsv();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getMediaMatchFields = (row, product) => {
+    const metafield = (metafieldPayloads || []).find((m) => m.handle === product.handle);
+
+    return {
+      mediaKeyword: row?.["mediaKeyword"],
+      mediaKeyword_type: row?.["mediaKeyword_type"],
+      "filter.branchType": metafield?.["filter.branchType"] ?? row?.["filter.branchType"],
+    };
+  };
 
   // Check for required columns
   const hasRequiredColumns = () => {
@@ -27,7 +36,7 @@ export default function MatchMedia() {
       const row = rows[product.__rowIndex];
       return {
         handle: product.handle,
-        mediaKeyword: row?.["照片關鍵字"],
+        ...getMediaMatchFields(row, product),
       };
     });
   };
@@ -50,7 +59,6 @@ export default function MatchMedia() {
 
     setIsSubmitting(true);
     try {
-
       console.log(payload);
       await postJson("/api/mediaSet", { rows: payload });
       alert("照片匹配請求已成功送出。");
@@ -62,12 +70,12 @@ export default function MatchMedia() {
     }
   };
 
-  const previewData = productPayloads.slice(0, 10).map(product => {
+  const previewData = productPayloads.slice(0, 10).map((product) => {
     const row = rows[product.__rowIndex];
     return {
       handle: product.handle,
-      mediaKeyword: row?.["照片關鍵字"],
-    }
+      ...getMediaMatchFields(row, product),
+    };
   });
 
   return (
@@ -83,15 +91,15 @@ export default function MatchMedia() {
         {rows.length === 0 ? (
           <EmptyState />
         ) : !hasRequiredColumns() ? (
-            <div className="text-center bg-white rounded-lg shadow p-8">
-                <h3 className="text-lg font-semibold text-red-600">缺少必要欄位</h3>
-                <p className="mt-2 text-slate-600">
-                    請確認您的 CSV 檔案包含以下欄位：
-                    <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md ml-2">
-                        {REQUIRED_COLUMNS.join(", ")}
-                    </span>
-                </p>
-            </div>
+          <div className="text-center bg-white rounded-lg shadow p-8">
+            <h3 className="text-lg font-semibold text-red-600">缺少必要欄位</h3>
+            <p className="mt-2 text-slate-600">
+              請確認您的 CSV 檔案包含以下欄位：
+              <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md ml-2">
+                {REQUIRED_COLUMNS.join(", ")}
+              </span>
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-12 gap-4 lg:gap-6">
             <AsideList
@@ -108,7 +116,9 @@ export default function MatchMedia() {
                     <thead className="text-xs text-slate-700 uppercase bg-slate-50">
                       <tr>
                         <th scope="col" className="px-6 py-3">Handle</th>
-                        <th scope="col" className="px-6 py-3">照片關鍵字</th>
+                        <th scope="col" className="px-6 py-3">mediaKeyword</th>
+                        <th scope="col" className="px-6 py-3">mediaKeyword_type</th>
+                        <th scope="col" className="px-6 py-3">filter.branchType</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -116,6 +126,12 @@ export default function MatchMedia() {
                         <tr key={index} className="bg-white border-b hover:bg-slate-50">
                           <td className="px-6 py-4 font-mono text-slate-800">{data.handle}</td>
                           <td className="px-6 py-4">{data.mediaKeyword}</td>
+                          <td className="px-6 py-4 font-mono">
+                            {data.mediaKeyword_type || <span className="text-red-500">缺少值</span>}
+                          </td>
+                          <td className="px-6 py-4 font-mono">
+                            {data["filter.branchType"] || <span className="text-red-500">缺少值</span>}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
