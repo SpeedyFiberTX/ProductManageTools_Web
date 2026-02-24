@@ -57,11 +57,42 @@ export default function Header() {
 
   // 根據平台決定顯示哪個選單
   const navItems = platform === 'shopify' ? SHOPIFY_NAV : platform === 'amazon' ?AMAZON_NAV : TOOLS_NAV;
+  const shopifyRightNavLabels = new Set(["結果紀錄", "產品備份"]);
+  const shopifyPrimaryNav = platform === "shopify"
+    ? navItems.filter((item) => !shopifyRightNavLabels.has(item.label))
+    : navItems;
+  const shopifySecondaryNav = platform === "shopify"
+    ? navItems.filter((item) => shopifyRightNavLabels.has(item.label))
+    : [];
 
   // 樣式設定：Amazon 模式使用淡橘色背景以示區別
   const headerClass = platform === 'shopify'
     ? "sticky top-0 z-40 w-full bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-slate-200/60"
     : "sticky top-0 z-40 w-full bg-orange-50/90 backdrop-blur supports-[backdrop-filter]:bg-orange-50/60 border-b border-orange-200/60";
+
+  const renderNavLink = ({ label, to, tone = "default" }) => {
+    const isYellow = label.includes("🚀");
+    const isMgmt = tone === "management";
+
+    return (
+      <NavLink
+        key={label}
+        to={to}
+        className={({ isActive }) =>
+          "whitespace-nowrap rounded-xl px-3 py-2 text-sm transition border " +
+          (isActive
+            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+            : isYellow
+              ? "bg-gray-500 text-white border-slate-200 hover:bg-gray-600"
+              : isMgmt
+                ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-200")
+        }
+      >
+        {label}
+      </NavLink>
+    );
+  };
 
   return (
     <header className={headerClass}>
@@ -81,30 +112,26 @@ export default function Header() {
         </div>
 
         {/* 中間：導航選單 */}
-        <nav className="flex items-center gap-2 overflow-x-auto py-3 custom-scroll flex-1 mr-4">
-          {navItems.map(({ label, to }) => {
-            const isYellow = label.includes("🚀");
+        {platform === "shopify" ? (
+          <div className="flex items-center gap-3 flex-1 min-w-0 mr-4 py-3">
+            <nav className="flex items-center gap-2 overflow-x-auto custom-scroll min-w-0 flex-1">
+              {shopifyPrimaryNav.map(renderNavLink)}
+              <div className="flex items-center gap-2 lg:hidden">
+                {shopifySecondaryNav.map((item) => renderNavLink({ ...item, tone: "management" }))}
+              </div>
+            </nav>
 
-            return (
-              <NavLink
-                key={label}
-                to={to}
-                className={({ isActive }) =>
-                  "whitespace-nowrap rounded-xl px-3 py-2 text-sm transition border " +
-                  (isActive
-                    ? isYellow
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                      : "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                    : isYellow
-                      ? "bg-gray-500 text-white border-slate-200 hover:bg-gray-600"
-                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-200")
-                }
-              >
-                {label}
-              </NavLink>
-            );
-          })}
-        </nav>
+            {!!shopifySecondaryNav.length && (
+              <div className="hidden lg:flex items-center gap-2 shrink-0 pl-3 border-l border-slate-300">
+                {shopifySecondaryNav.map((item) => renderNavLink({ ...item, tone: "management" }))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <nav className="flex items-center gap-2 overflow-x-auto py-3 custom-scroll flex-1 mr-4">
+            {navItems.map(renderNavLink)}
+          </nav>
+        )}
 
         {/* 右側：使用者資訊 & 登出 */}
         {user && (
