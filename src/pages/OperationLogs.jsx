@@ -241,7 +241,7 @@ export default function OperationLogs() {
                       <td className="py-2 pr-3 whitespace-nowrap">{row.operationKey || "-"}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{row.method} {row.routePath}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{row.rowCount ?? row.itemCount ?? "-"}</td>
-                      <td className="py-2 pr-3 whitespace-nowrap">{row.user?.email || row.user?.id || "-"}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{row.user?.email || "-"}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{fmtMs(row.durationMs)}</td>
                       <td className="py-2 pr-3 max-w-[360px]">
                         <div className="truncate" title={row.message || ""}>{row.message || "-"}</div>
