@@ -27,9 +27,10 @@ function findSeriesInSku(baseSku = "", seriesList = []) {
   return seriesList.find(code => up.includes(code)) || null;
 }
 
-// 第 15–16 碼是否為 NP（1-based → slice(14,16)）
+// 檢查倒數兩碼是否為 NP
 function isNP(baseSku = "") {
-  return String(baseSku).toUpperCase().slice(14, 16) === "NP";
+  const up = String(baseSku).toUpperCase();
+  return up.slice(-2) === "NP";
 }
 
 /** 讀 CSV → 產生 variants
