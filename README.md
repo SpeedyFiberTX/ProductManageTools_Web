@@ -2,6 +2,19 @@
 
 SpeedyFiberTX 的前端管理介面（React + Vite + Tailwind），提供 Shopify / Amazon / Tools 操作頁面與新版產品備份瀏覽。
 
+## Amazon Dashboard 資料來源（目前）
+
+Amazon Dashboard 目前只呼叫：
+
+- `GET /api/amazon/stats`
+
+該 API 由 `ProductManageTools` 提供，後端會聚合：
+
+- `amazon_daily_stats`：銷售 / 流量
+- `amazon_listings`：SKU / FNSKU / FBA / FBM 庫存摘要
+
+前端不直接讀取 `amazon_products`。目前 Dashboard 已改為依賴後端聚合結果。
+
 ## 主要頁面
 
 - Shopify 操作頁：建立產品、更新庫存、Metafields、翻譯、Handle 等。
@@ -29,3 +42,4 @@ npm run dev
 - `GET /api/products`
 - `GET /api/products/:id`
 - `GET /api/products/:id/versions`
+- `GET /api/amazon/stats`
