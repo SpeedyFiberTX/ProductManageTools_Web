@@ -150,6 +150,7 @@ export default function ConfirmPreviewModal({
   sectionOrder,
   columnOrderMap,
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const visibleSections = useMemo(() => {
     const list = Array.isArray(sections) ? sections : [];
     const filtered = onlyNonEmptyTabs ? list.filter((s) => s.rows?.length) : list;
@@ -185,7 +186,19 @@ export default function ConfirmPreviewModal({
   if (!open) return null;
 
   const current = visibleSections.find((s) => s.id === tab) || visibleSections[0];
-  const confirmAll = () => onConfirm(visibleSections.map((s) => s.id));
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose?.();
+  };
+  const confirmAll = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onConfirm(visibleSections.map((s) => s.id));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // 匯出「本分頁」
   const exportCurrentCsv = () => {
@@ -259,7 +272,7 @@ export default function ConfirmPreviewModal({
   return (
     <div className="fixed inset-0 z-[100]">
       {/* backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
 
       {/* dialog：加 overscroll-contain，避免滾動穿透 */}
       <div className="absolute inset-x-0 top-10 mx-auto w-11/12 max-w-6xl max-h-[85vh] rounded-2xl bg-white shadow-xl flex flex-col overscroll-contain">
@@ -274,8 +287,9 @@ export default function ConfirmPreviewModal({
             )}
           </h3>
           <button
-            onClick={onClose}
-            className="rounded-lg px-3 py-1 text-slate-600 hover:bg-slate-100"
+            onClick={handleClose}
+            className="rounded-lg px-3 py-1 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            disabled={isSubmitting}
           >
             關閉
           </button>
@@ -294,6 +308,7 @@ export default function ConfirmPreviewModal({
                       ? "bg-blue-600 text-white"
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
+                  disabled={isSubmitting}
                 >
                   {s.label}
                 </button>
@@ -304,7 +319,7 @@ export default function ConfirmPreviewModal({
 
         {/* 唯一捲動容器：overscroll-contain + 穩定捲軸 */}
         <div
-          className="px-6 py-4 flex-1 min-h-0 overflow-auto overscroll-contain"
+          className="relative px-6 py-4 flex-1 min-h-0 overflow-auto overscroll-contain"
           style={{ scrollbarGutter: "stable both-edges", overscrollBehavior: "contain" }}
         >
           {current ? (
@@ -316,6 +331,17 @@ export default function ConfirmPreviewModal({
           ) : (
             <div className="text-slate-500">沒有分頁可顯示</div>
           )}
+
+          {isSubmitting && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                <div className="text-sm font-medium text-slate-700">
+                  資料送出中，請稍候...
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* footer */}
@@ -324,7 +350,7 @@ export default function ConfirmPreviewModal({
             <button
               onClick={exportCurrentCsv}
               className="rounded-xl px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              disabled={!current?.rows?.length}
+              disabled={isSubmitting || !current?.rows?.length}
               title="匯出目前分頁為 CSV"
             >
               匯出本分頁 CSV
@@ -335,7 +361,7 @@ export default function ConfirmPreviewModal({
               <button
                 onClick={exportZip}
                 className="rounded-xl px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                disabled={!totalCount}
+                disabled={isSubmitting || !totalCount}
                 title="打包全部 CSV（Products+Variants、Metafields、Translations）"
               >
                 匯出全部 CSV
@@ -344,17 +370,18 @@ export default function ConfirmPreviewModal({
           </div>
           <div className="flex gap-3">
             <button
-              onClick={onClose}
-              className="rounded-xl px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50"
+              onClick={handleClose}
+              className="rounded-xl px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              disabled={isSubmitting}
             >
               取消
             </button>
             <button
               onClick={confirmAll}
               className="rounded-xl px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              disabled={!totalCount}
+              disabled={isSubmitting || !totalCount}
             >
-              確認送出
+              {isSubmitting ? "送出中..." : "確認送出"}
             </button>
           </div>
         </div>
