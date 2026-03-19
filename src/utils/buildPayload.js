@@ -167,10 +167,16 @@ export function buildMetafieldsPayload(row, customMap = {}) {
     if (!header) return;
     const key = typeof header === "string" ? header.trim() : header;
     const raw = row?.[key];
-    if (raw === undefined || raw === null) return;
-    const str = String(raw);
-    if (str.trim() === "") return;
-    out[`table.${slot}`] = str;
+    if (!key) return;
+
+    // For configured custom table slots, always include the key so an empty CSV
+    // cell can intentionally overwrite the existing metafield with an empty value.
+    if (raw === undefined || raw === null) {
+      out[`table.${slot}`] = "";
+      return;
+    }
+
+    out[`table.${slot}`] = String(raw).trim();
   });
 
   return out;
