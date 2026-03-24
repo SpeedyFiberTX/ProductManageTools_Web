@@ -67,12 +67,26 @@ export default function BackupV2() {
 
   const canPrev = page > 1;
   const canNext = items.length === pageSize;
+
+  function getCollectionLabels(item) {
+    const raw = Array.isArray(item?.collections)
+      ? item.collections
+      : Array.isArray(item?.data?.collections)
+        ? item.data.collections
+        : [];
+
+    return raw
+      .map((collectionItem) => collectionItem?.title || collectionItem?.handle || "")
+      .filter(Boolean);
+  }
+
   const sortedItems = useMemo(() => {
     const list = [...items];
     const dir = sortDir === "asc" ? 1 : -1;
     const getValue = (item) => {
       if (sortKey === "title") return item.title || "";
       if (sortKey === "handle") return item.handle || "";
+      if (sortKey === "collections") return getCollectionLabels(item).join(", ");
       if (sortKey === "type") return item.productType || "";
       if (sortKey === "status") return item.status || "";
       return item.last_updated_at_source || "";
@@ -228,6 +242,7 @@ export default function BackupV2() {
                 {[
                   { key: "title", label: "Title" },
                   { key: "handle", label: "Handle" },
+                  { key: "collections", label: "Collections" },
                   { key: "type", label: "Type" },
                   { key: "status", label: "Status" },
                   { key: "updated", label: "Updated" },
@@ -256,7 +271,7 @@ export default function BackupV2() {
             <tbody>
               {loading && (
                 <tr>
-                  <td className="px-5 py-6 text-slate-400" colSpan={5}>
+                  <td className="px-5 py-6 text-slate-400" colSpan={6}>
                     載入中...
                   </td>
                 </tr>
@@ -264,7 +279,7 @@ export default function BackupV2() {
 
               {!loading && items.length === 0 && (
                 <tr>
-                  <td className="px-5 py-6 text-slate-400" colSpan={5}>
+                  <td className="px-5 py-6 text-slate-400" colSpan={6}>
                     沒有資料
                   </td>
                 </tr>
@@ -284,6 +299,22 @@ export default function BackupV2() {
                       </button>
                     </td>
                     <td className="px-5 py-3 text-slate-600">{item.handle}</td>
+                    <td className="px-5 py-3 text-slate-600">
+                      <div className="flex flex-wrap gap-1.5 max-w-xs">
+                        {getCollectionLabels(item).length > 0 ? (
+                          getCollectionLabels(item).map((label) => (
+                            <span
+                              key={`${item.id}-${label}`}
+                              className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 ring-1 ring-inset ring-emerald-100"
+                            >
+                              {label}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-5 py-3 text-slate-600">{item.productType || "—"}</td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">

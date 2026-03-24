@@ -89,11 +89,17 @@ export default function BackupDetail() {
   const images = Array.isArray(data.images) ? data.images : [];
   const variants = Array.isArray(data.variants) ? data.variants : [];
   const metafieldsRaw = Array.isArray(data.metafields) ? data.metafields : [];
+  const collections = Array.isArray(data.collections) ? data.collections : [];
   const HIDDEN_NAMESPACES = new Set(["global", "judgeme", "reviews"]);
   const metafields = metafieldsRaw.filter((m) => !HIDDEN_NAMESPACES.has(String(m?.namespace || "").trim()));
   const description = stripHtml(data.descriptionHtml);
   const productTranslations = data.translations || {};
   const currentTranslations = currentData.translations || {};
+
+  const getCollectionLabels = (items = []) =>
+    (Array.isArray(items) ? items : [])
+      .map((item) => item?.title || item?.handle || "")
+      .filter(Boolean);
 
   const isDifferent = (a, b) => {
     try {
@@ -110,6 +116,7 @@ export default function BackupDetail() {
       isDifferent(data.productType, currentData.productType) ||
       isDifferent(data.status, currentData.status) ||
       isDifferent(data.vendor, currentData.vendor) ||
+      isDifferent(getCollectionLabels(data.collections), getCollectionLabels(currentData.collections)) ||
       isDifferent(data.updatedAt, currentData.updatedAt),
     description:
       isDifferent(data.descriptionHtml, currentData.descriptionHtml) ||
@@ -463,6 +470,25 @@ export default function BackupDetail() {
                     <tr>
                       <td className="py-2 pr-3 text-xs font-semibold text-slate-500">Vendor</td>
                       <td className="py-2 text-slate-700">{data.vendor || "—"}</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-3 text-xs font-semibold text-slate-500">Collections</td>
+                      <td className="py-2 text-slate-700">
+                        {collections.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {getCollectionLabels(collections).map((label) => (
+                              <span
+                                key={label}
+                                className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-3 text-xs font-semibold text-slate-500">Updated</td>
