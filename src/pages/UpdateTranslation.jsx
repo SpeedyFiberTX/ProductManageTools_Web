@@ -10,12 +10,10 @@ import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
-
-import { useAuth } from "../auth/AuthContext";
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from "../lib/api";
 
 export default function UpdateTranslation() {
-  const { accessToken } = useAuth();
+  const { fetch: apiFetch } = useApi();
   const {
     rows, currentRow, selectedIndex, setIndex,
     translationPayloads, currentTranslationPayload
@@ -50,7 +48,7 @@ export default function UpdateTranslation() {
         id: "translations",
         label: `Translations (${translationPayloads?.length || 0})`,
         rows: Array.isArray(translationPayloads) ? translationPayloads : [],
-        endpoint: `${API_BASE}/api/translate`,
+        endpoint: "/api/translate",
       },
     ]);
     setModalDefaultTab("translations");
@@ -69,7 +67,7 @@ export default function UpdateTranslation() {
         id: "translations",
         label: "Translations (1)",
         rows: body,
-        endpoint: `${API_BASE}/api/translate`,
+        endpoint: "/api/translate",
       },
     ]);
     setModalDefaultTab("translations");
@@ -87,7 +85,7 @@ export default function UpdateTranslation() {
         id: "translations",
         label: `Translations (${body.length})`,
         rows: body,
-        endpoint: `${API_BASE}/api/translate`,
+        endpoint: "/api/translate",
       },
     ]);
     setModalDefaultTab("translations");
@@ -108,15 +106,13 @@ export default function UpdateTranslation() {
 
   let anySuccess = false;
 
-  try {
-    // 逐一送出（若未來有多分頁，也只彈一次提示）
-    for (const s of chosen) {
-      const resp = await fetch(s.endpoint, {
+    try {
+      // 逐一送出（若未來有多分頁，也只彈一次提示）
+      for (const s of chosen) {
+      const resp = await apiFetch(s.endpoint, {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({ rows: s.rows }),
       });

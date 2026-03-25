@@ -37,6 +37,13 @@ npm install
 npm run dev
 ```
 
+## API 與驗證規範
+
+- 前端呼叫本站後端 API 時，統一使用 `src/lib/api.ts` 提供的 `useApi().fetch`。
+- 不要在頁面或 utility 裡手動組 `Authorization` header。
+- 不要自行呼叫 `/auth/refresh` 或各自實作 401 retry；token refresh 與重送邏輯已集中在 `useApi().fetch`。
+- 只有不涉及登入態的資源請求可以保留原生 `fetch`，例如 static CSV / public asset。
+
 ## 相關 API
 
 - `GET /api/products`

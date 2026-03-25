@@ -11,12 +11,10 @@ import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
 import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
-
-import { useAuth } from "../auth/AuthContext";
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from "../lib/api";
 
 export default function UpdateRelativeProducts() {
-  const { accessToken } = useAuth();
+  const { fetch: apiFetch } = useApi();
   const {
     rows,
     selectedIndex,
@@ -58,12 +56,12 @@ export default function UpdateRelativeProducts() {
     : [];
 
   setModalSections([
-    {
-      id: "products",
-      label: `Products (${minimalRows.length})`,
-      rows: minimalRows,
-      endpoint: `${API_BASE}/api/updateProductRelative`,
-    },
+      {
+        id: "products",
+        label: `Products (${minimalRows.length})`,
+        rows: minimalRows,
+        endpoint: "/api/updateProductRelative",
+      },
   ]);
 
   setModalDefaultTab("products");
@@ -82,7 +80,7 @@ export default function UpdateRelativeProducts() {
         id: "products",
         label: `Products (1)`,
         rows: body,
-        endpoint: `${API_BASE}/api/updateProductRelative`,
+        endpoint: "/api/updateProductRelative",
       },
     ]);
     setModalDefaultTab("products");
@@ -100,7 +98,7 @@ export default function UpdateRelativeProducts() {
         id: "products",
         label: `Products (${body.length})`,
         rows: body,
-        endpoint: `${API_BASE}/api/updateProductRelative`,
+        endpoint: "/api/updateProductRelative",
       },
     ]);
     setModalDefaultTab("products");
@@ -126,10 +124,9 @@ export default function UpdateRelativeProducts() {
       // 逐一送出（若未來有多分頁，也只彈一次提示）
       for (const s of chosen) {
         const { requestId } = await postJsonWithResultLog({
-          apiBase: API_BASE,
+          apiFetch,
           endpoint: s.endpoint,
           body: { rows: s.rows },
-          accessToken,
           successMessage: "資料已送出，您可關閉視窗。",
         });
         anySuccess = true;
@@ -139,8 +136,6 @@ export default function UpdateRelativeProducts() {
       if (anySuccess) {
         const latestRequestId = requestIds[requestIds.length - 1];
         await notifyAndOfferResultExport({
-          apiBase: API_BASE,
-          accessToken,
           requestId: latestRequestId,
           message: latestRequestId
             ? `資料已送出，您可關閉視窗。\nrequestId: ${latestRequestId}`

@@ -1,10 +1,3 @@
-function joinURL(base, path) {
-  if (!base) return path;
-  const b = base.endsWith("/") ? base.slice(0, -1) : base;
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${b}${p}`;
-}
-
 async function parseResponse(resp) {
   const text = await resp.text();
   try {
@@ -25,14 +18,9 @@ function downloadBlob(filename, blob) {
   URL.revokeObjectURL(url);
 }
 
-export async function downloadOperationLogCsv({ apiBase, requestId, accessToken }) {
-  const url = joinURL(apiBase, `/api/operation-logs/${encodeURIComponent(requestId)}/export.csv`);
-  const resp = await fetch(url, {
+export async function downloadOperationLogCsv({ apiFetch, requestId }) {
+  const resp = await apiFetch(`/api/operation-logs/${encodeURIComponent(requestId)}/export.csv`, {
     method: "GET",
-    credentials: "include",
-    headers: {
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    },
   });
 
   if (!resp.ok) {
@@ -44,19 +32,15 @@ export async function downloadOperationLogCsv({ apiBase, requestId, accessToken 
 }
 
 export async function postJsonWithResultLog({
-  apiBase,
+  apiFetch,
   endpoint,
   body,
-  accessToken,
   successMessage = "資料已送出。",
 }) {
-  const url = endpoint.startsWith("http") ? endpoint : joinURL(apiBase, endpoint);
-  const resp = await fetch(url, {
+  const resp = await apiFetch(endpoint, {
     method: "POST",
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
     body: JSON.stringify(body),
   });

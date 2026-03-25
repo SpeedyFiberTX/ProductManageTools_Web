@@ -8,10 +8,10 @@ import Hero from "../component/Hero";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 
-import { useAuth } from "../auth/AuthContext";
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from "../lib/api";
 
 export default function UpdateVariants() {
+  const { fetch: apiFetch } = useApi();
   const {
     rows,
     currentRow,
@@ -52,7 +52,7 @@ export default function UpdateVariants() {
       id: "variants",
       label: `Variants (${rowsCount})`,
       rows: rowsToSend,
-      endpoint: `${API_BASE}/api/variantsUpdater`,
+      endpoint: "/api/variantsUpdater",
     },
   ]), [rowsCount, rowsToSend]);
 
@@ -75,7 +75,7 @@ export default function UpdateVariants() {
     try {
       // 逐一依分頁送出（此頁目前只有 variants）
       for (const s of chosen) {
-        const resp = await fetch(s.endpoint, {
+        const resp = await apiFetch(s.endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rows: s.rows }),

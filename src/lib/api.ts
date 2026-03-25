@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 // ✅ 同網域就用空字串，跨網域就填完整 origin
 const API_BASE =  import.meta.env.VITE_API_BASE;
 // 去重複用的 refresh promise，避免同時多個 401 重複打 refresh
-let refreshPromise: Promise<Response> | null = null;
+let refreshPromise: Promise<{ ok: boolean; accessToken: string | null }> | null = null;
 
 function joinURL(base: string, path: string) {
   if (!base) return path.startsWith('/') ? path : `/${path}`;
@@ -16,7 +16,7 @@ function joinURL(base: string, path: string) {
 export function useApi() {
   const { ready, accessToken } = useAuth(); // Retrieve accessToken
 
-  async function rawFetch(path: string, init: RequestInit = {}) {
+  async function rawFetch(path: string, init: RequestInit = {}, overrideToken?: string | null) {
     const url = joinURL(API_BASE, path);
     const headers = new Headers(init.headers || {});
     const hasBody = init.body !== undefined && init.body !== null;
@@ -27,8 +27,9 @@ export function useApi() {
     }
 
     // Add Authorization header if accessToken is available and not already set
-    if (accessToken && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${accessToken}`);
+    const tokenToUse = overrideToken !== undefined ? overrideToken : accessToken;
+    if (tokenToUse && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${tokenToUse}`);
     }
 
     return fetch(url, {
@@ -47,17 +48,29 @@ export function useApi() {
 
     // 進入 refresh 區段（全域共用一個 promise）
     if (!refreshPromise) {
-      refreshPromise = rawFetch('/auth/refresh', { method: 'POST' });
+      refreshPromise = rawFetch('/auth/refresh', { method: 'POST' }, null)
+        .then(async (r) => {
+          if (!r.ok) return { ok: false, accessToken: null };
+          try {
+            const data = await r.json();
+            return { ok: true, accessToken: data?.access_token || null };
+          } catch {
+            return { ok: true, accessToken: null };
+          }
+        });
     }
+    let refreshResult: { ok: boolean; accessToken: string | null };
     try {
-      const r = await refreshPromise;
-      if (!r.ok) return resp; // refresh 失敗 → 把 401 傳回去
+      refreshResult = await refreshPromise;
+      if (!refreshResult.ok) return resp; // refresh 失敗 → 把 401 傳回去
     } finally {
       refreshPromise = null;
     }
 
     // refresh 成功 → 重送一次原請求
-    resp = await rawFetch(path, init);
+    const retryHeaders = new Headers(init.headers || {});
+    retryHeaders.delete('Authorization');
+    resp = await rawFetch(path, { ...init, headers: retryHeaders }, refreshResult.accessToken);
     return resp;
   }
 

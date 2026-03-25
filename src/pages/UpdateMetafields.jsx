@@ -13,12 +13,10 @@ import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
-
-import { useAuth } from "../auth/AuthContext";
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from "../lib/api";
 
 export default function UpdateMetafields() {
-  const { accessToken } = useAuth();
+  const { fetch: apiFetch } = useApi();
   const {
     rows, headers, currentRow, selectedIndex, setIndex,
     customMap, setCustomMap,
@@ -54,7 +52,7 @@ export default function UpdateMetafields() {
         id: "metafields",
         label: `Metafields (${metafieldPayloads?.length || 0})`,
         rows: Array.isArray(metafieldPayloads) ? metafieldPayloads : [],
-        endpoint: `${API_BASE}/api/metafieldsWriter`,
+        endpoint: "/api/metafieldsWriter",
       },
     ]);
     setModalDefaultTab("metafields");
@@ -73,7 +71,7 @@ export default function UpdateMetafields() {
         id: "metafields",
         label: "Metafields (1)",
         rows: body,
-        endpoint: `${API_BASE}/api/metafieldsWriter`,
+        endpoint: "/api/metafieldsWriter",
       },
     ]);
     setModalDefaultTab("metafields");
@@ -91,7 +89,7 @@ export default function UpdateMetafields() {
         id: "metafields",
         label: `Metafields (${body.length})`,
         rows: body,
-        endpoint: `${API_BASE}/api/metafieldsWriter`,
+        endpoint: "/api/metafieldsWriter",
       },
     ]);
     setModalDefaultTab("metafields");
@@ -112,15 +110,13 @@ export default function UpdateMetafields() {
 
   let anySuccess = false;
 
-  try {
-    // 逐一送出（若未來有多分頁，也只彈一次提示）
-    for (const s of chosen) {
-      const resp = await fetch(s.endpoint, {
+    try {
+      // 逐一送出（若未來有多分頁，也只彈一次提示）
+      for (const s of chosen) {
+      const resp = await apiFetch(s.endpoint, {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({ rows: s.rows }),
       });

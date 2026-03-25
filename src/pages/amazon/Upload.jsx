@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useApi } from '../../lib/api';
 
 export default function AmazonUpload() {
+    const { fetch: apiFetch } = useApi();
     // 預設昨天
     const [date, setDate] = useState(() => {
         const d = new Date();
@@ -26,10 +28,8 @@ export default function AmazonUpload() {
 
         setLoading(true);
         try {
-            const API_BASE = import.meta.env.VITE_API_BASE;
-            const res = await fetch(`${API_BASE}/api/amazon/upload-report`, {
+            const res = await apiFetch('/api/amazon/upload-report', {
                 method: 'POST',
-                credentials: 'include',
                 body: formData,
             });
 

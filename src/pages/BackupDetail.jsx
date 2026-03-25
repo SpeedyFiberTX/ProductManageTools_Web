@@ -285,10 +285,11 @@ export default function BackupDetail() {
         applyVariants: true,
         applyTranslations: true,
         applyMetafields: true,
+        applyCollections: true,
       };
       const res = await postJson(`/api/products/${encodeURIComponent(productId)}/restore`, payload);
       const warnings = Array.isArray(res?.result?.warnings) ? res.result.warnings : [];
-      const warnText = warnings.length ? `（警告 ${warnings.length} 項，請看後端 log）` : "";
+      const warnText = warnings.length ? `（警告 ${warnings.length} 項，已記錄到後端 log）` : "";
       setRestoreMessage((res?.message || "還原完成") + warnText);
 
       await Promise.all([fetchDetail(), fetchVersions()]);

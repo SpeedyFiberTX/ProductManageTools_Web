@@ -12,12 +12,10 @@ import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { pick } from "../utils/pick";
 import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
-
-import { useAuth } from "../auth/AuthContext";
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from "../lib/api";
 
 export default function UpdateProducts() {
-  const { accessToken } = useAuth();
+  const { fetch: apiFetch } = useApi();
   const {
     rows,
     selectedIndex,
@@ -52,11 +50,11 @@ export default function UpdateProducts() {
   // 1) Hero 的全部送出 → 直接把完整 productPayloads 放進 Modal
   const handleSubmitAll = () => {
     setModalSections([
-      {
+          {
         id: "products",
         label: `Products (${productPayloads?.length || 0})`,
         rows: Array.isArray(productPayloads) ? productPayloads : [],
-        endpoint: `${API_BASE}/api/productUpdater`,
+        endpoint: "/api/productUpdater",
       },
     ]);
     setModalDefaultTab("products");
@@ -75,7 +73,7 @@ export default function UpdateProducts() {
         id: "products",
         label: `Products (1)`,
         rows: body,
-        endpoint: `${API_BASE}/api/productUpdater`,
+        endpoint: "/api/productUpdater",
       },
     ]);
     setModalDefaultTab("products");
@@ -93,7 +91,7 @@ export default function UpdateProducts() {
         id: "products",
         label: `Products (${body.length})`,
         rows: body,
-        endpoint: `${API_BASE}/api/productUpdater`,
+        endpoint: "/api/productUpdater",
       },
     ]);
     setModalDefaultTab("products");
@@ -119,10 +117,9 @@ export default function UpdateProducts() {
     // 逐一送出（若未來有多分頁，也只彈一次提示）
     for (const s of chosen) {
       const { requestId } = await postJsonWithResultLog({
-        apiBase: API_BASE,
+        apiFetch,
         endpoint: s.endpoint,
         body: { rows: s.rows },
-        accessToken,
         successMessage: "資料已送出，您可關閉視窗。",
       });
       anySuccess = true;
@@ -132,8 +129,6 @@ export default function UpdateProducts() {
     if (anySuccess) {
       const latestRequestId = requestIds[requestIds.length - 1];
       await notifyAndOfferResultExport({
-        apiBase: API_BASE,
-        accessToken,
         requestId: latestRequestId,
         message: latestRequestId
           ? `資料已送出，您可關閉視窗。\nrequestId: ${latestRequestId}`

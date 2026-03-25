@@ -7,12 +7,10 @@ import AsideList from "../component/AsideList";
 import Hero from "../component/Hero";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
-
-import { useAuth } from "../auth/AuthContext";
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from "../lib/api";
 
 export default function CreateVariants() {
-  const { accessToken } = useAuth();
+  const { fetch: apiFetch } = useApi();
   const {
     rows,
     currentRow,
@@ -53,7 +51,7 @@ export default function CreateVariants() {
       id: "variants",
       label: `Variants (${rowsCount})`,
       rows: rowsToSend,
-      endpoint: `${API_BASE}/api/productVariantsBuilder`,
+      endpoint: "/api/productVariantsBuilder",
     },
   ]), [rowsCount, rowsToSend]);
 
@@ -76,12 +74,10 @@ export default function CreateVariants() {
     try {
       // 逐一依分頁送出（此頁目前只有 variants）
       for (const s of chosen) {
-        const resp = await fetch(s.endpoint, {
+        const resp = await apiFetch(s.endpoint, {
           method: "POST",
-          credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
           body: JSON.stringify({ rows: s.rows }),
         });

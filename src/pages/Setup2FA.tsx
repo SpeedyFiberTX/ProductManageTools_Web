@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE = import.meta.env.VITE_API_BASE;
+import { useApi } from '../lib/api';
 
 export default function Setup2FA() {
   const { reloadUser, logout } = useAuth(); // 🟢 取得 reloadUser
+  const { fetch: apiFetch } = useApi();
   const nav = useNavigate();
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
@@ -16,9 +16,8 @@ export default function Setup2FA() {
   // 1. 取得 QR Code
   const handleSetup = async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/2fa/setup`, {
+      const res = await apiFetch('/auth/2fa/setup', {
         method: 'POST',
-        credentials: 'include', 
         headers: { 'Content-Type': 'application/json' } 
       });
       const data = await res.json();
@@ -36,9 +35,8 @@ export default function Setup2FA() {
   const handleEnable = async () => {
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/auth/2fa/enable`, {
+      const res = await apiFetch('/auth/2fa/enable', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, secret }),
       });

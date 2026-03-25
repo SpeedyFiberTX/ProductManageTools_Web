@@ -16,6 +16,7 @@ type AuthContextType = {
   login2FA: (code: string, tempToken: string) => Promise<void>;
   logout: () => Promise<void>;
   reloadUser: () => Promise<void>;
+  refresh: () => Promise<boolean>;
   ready: boolean;
   accessToken: string | null;
 };
@@ -35,11 +36,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void refresh();
+    }, 12 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   async function refresh() {
-    await fetch(`${API_BASE}/auth/refresh`, {
+    const r = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
+    if (!r.ok) {
+      setAccessToken(null);
+      return false;
+    }
+    try {
+      const data = await r.json();
+      setAccessToken(data?.access_token || null);
+    } catch {
+      setAccessToken(null);
+    }
+    return true;
   }
 
   // 🟢 這是重新載入使用者狀態的關鍵函式
@@ -99,10 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
     });
     setUser(null);
+    setAccessToken(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, login2FA, logout, reloadUser: loadMe, ready, accessToken }}>
+    <AuthContext.Provider value={{ user, login, login2FA, logout, reloadUser: loadMe, refresh, ready, accessToken }}>
       {children}
     </AuthContext.Provider>
   );

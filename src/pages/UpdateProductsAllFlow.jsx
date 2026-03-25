@@ -17,10 +17,8 @@ import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
 import { pick } from "../utils/pick";
+import { useApi } from "../lib/api";
 
-import { useAuth } from "../auth/AuthContext";
-
-const API_BASE = import.meta.env.VITE_API_BASE;
 const VARIANTS_BLOCK_KEY = "__variants_block__";
 
 function filterRowsBySelectedKeys(rows = [], selectedKeys = []) {
@@ -45,7 +43,7 @@ function filterRowsByRowIndex(rows = [], targetRowIndex) {
 }
 
 export default function UpdateProductsAllFlow() {
-  const { accessToken } = useAuth();
+  const { fetch: apiFetch } = useApi();
   const {
     rows, headers, currentRow, selectedIndex, setIndex,
     customMap, setCustomMap,
@@ -204,9 +202,8 @@ export default function UpdateProductsAllFlow() {
       // console.log(JSON.stringify(payload, null, 2));
 
       const { requestId, message } = await postJsonWithResultLog({
-        apiBase: API_BASE,
+        apiFetch,
         endpoint: "/api/updateProductFlow",
-        accessToken,
         body: {
           products: productsRows,
           metafields: metafieldsRows,
@@ -215,7 +212,7 @@ export default function UpdateProductsAllFlow() {
         },
         successMessage: "整批更新流程已啟動，請稍後查看官網後台是否更新成功，並請記得到 notion 修改 status 狀態與官網同步唷。",
       });
-      await notifyAndOfferResultExport({ apiBase: API_BASE, accessToken, requestId, message });
+      await notifyAndOfferResultExport({ requestId, message });
     } catch (e) {
       console.error("updateProductFlow error:", e);
       alert(`送出失敗：${e.message}`);
