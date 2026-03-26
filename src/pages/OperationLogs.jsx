@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useApi } from "../lib/api";
 
 function fmtTime(value) {
@@ -32,8 +33,17 @@ function statusLabel(status) {
   return s || "-";
 }
 
+function isBatchRestoreRun(row) {
+  return String(row?.operationKey || "").includes("products.restoreBatch");
+}
+
+function getBatchRestoreSummary(row) {
+  return row?.extra?.summary || null;
+}
+
 export default function OperationLogs() {
   const api = useApi();
+  const location = useLocation();
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -44,7 +54,7 @@ export default function OperationLogs() {
   const [filters, setFilters] = useState({
     status: "",
     route: "",
-    q: "",
+    q: new URLSearchParams(location.search).get("q") || "",
     limit: 100,
   });
 
@@ -133,6 +143,26 @@ export default function OperationLogs() {
       URL.revokeObjectURL(url);
     } catch (err) {
       alert(err?.message || "單筆匯出失敗");
+    }
+  }
+
+  async function handleExportBatchRestoreResult(requestId) {
+    try {
+      const resp = await api.fetch(`/api/operation-logs/${encodeURIComponent(requestId)}/batch-restore.csv`, {
+        method: "GET",
+      });
+      if (!resp.ok) throw new Error(`匯出失敗 (${resp.status})`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `batch-restore-${requestId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err?.message || "批次還原結果匯出失敗");
     }
   }
 
@@ -225,6 +255,7 @@ export default function OperationLogs() {
                 const isOpen = expandedId === row.requestId;
                 const detail = detailMap[row.requestId];
                 const events = Array.isArray(detail?.events) ? detail.events : [];
+                const batchSummary = getBatchRestoreSummary(row);
                 return (
                   <Fragment key={row.requestId}>
                     <tr
@@ -245,18 +276,37 @@ export default function OperationLogs() {
                       <td className="py-2 pr-3 whitespace-nowrap">{fmtMs(row.durationMs)}</td>
                       <td className="py-2 pr-3 max-w-[360px]">
                         <div className="truncate" title={row.message || ""}>{row.message || "-"}</div>
+                        {batchSummary && (
+                          <div className="mt-1 text-[11px] text-slate-500">
+                            成功 {batchSummary.succeeded ?? 0} / 失敗 {batchSummary.failed ?? 0} / 略過 {batchSummary.skipped ?? 0}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 pr-3 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleExportSingle(row.requestId);
-                          }}
-                          className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-xs"
-                        >
-                          下載 CSV
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportSingle(row.requestId);
+                            }}
+                            className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-50 text-xs"
+                          >
+                            下載紀錄 CSV
+                          </button>
+                          {isBatchRestoreRun(row) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExportBatchRestoreResult(row.requestId);
+                              }}
+                              className="px-2 py-1 rounded border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs"
+                            >
+                              下載結果 CSV
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {isOpen && (
@@ -275,9 +325,24 @@ export default function OperationLogs() {
                                   <div><span className="text-slate-400">eventCount:</span> {row.eventCount ?? events.length}</div>
                                   <div><span className="text-slate-400">IP:</span> {row.clientIp || "-"}</div>
                                 </div>
+                                {batchSummary ? (
+                                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                                    <div className="font-semibold mb-2">Batch Restore 摘要</div>
+                                    <div>總筆數：{batchSummary.total ?? 0}</div>
+                                    <div>成功：{batchSummary.succeeded ?? 0}</div>
+                                    <div>失敗：{batchSummary.failed ?? 0}</div>
+                                    <div>略過：{batchSummary.skipped ?? 0}</div>
+                                    <div>警告：{batchSummary.warning_count ?? 0}</div>
+                                  </div>
+                                ) : null}
                                 {row.payloadSummary ? (
                                   <pre className="mt-3 text-xs bg-slate-900 text-slate-100 rounded-lg p-3 overflow-auto">
                                     {JSON.stringify(row.payloadSummary, null, 2)}
+                                  </pre>
+                                ) : null}
+                                {row.extra ? (
+                                  <pre className="mt-3 text-xs bg-slate-100 text-slate-700 rounded-lg p-3 overflow-auto">
+                                    {JSON.stringify(row.extra, null, 2)}
                                   </pre>
                                 ) : null}
                                 {row.error ? (
