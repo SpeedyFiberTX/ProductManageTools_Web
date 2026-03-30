@@ -16,12 +16,20 @@ export default function MatchMedia() {
 
   const getMediaMatchFields = (row, product) => {
     const metafield = (metafieldPayloads || []).find((m) => m.handle === product.handle);
+    const mediaKeywordType = row?.["mediaKeyword_type"];
+    const normalizedMediaKeywordType = String(mediaKeywordType ?? "").trim().toUpperCase();
+    const branchType = metafield?.["filter.branchType"] ?? row?.["filter.branchType"];
 
-    return {
+    const fields = {
       mediaKeyword: row?.["mediaKeyword"],
-      mediaKeyword_type: row?.["mediaKeyword_type"],
-      "filter.branchType": metafield?.["filter.branchType"] ?? row?.["filter.branchType"],
+      mediaKeyword_type: mediaKeywordType,
     };
+
+    if (normalizedMediaKeywordType === "MTPMPO") {
+      fields["filter.branchType"] = branchType;
+    }
+
+    return fields;
   };
 
   // Check for required columns
