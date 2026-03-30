@@ -23,6 +23,13 @@ Amazon Dashboard 目前只呼叫：
 - 新版備份頁清單：`/backup_v2`（分頁、搜尋、排序）。
 - 新版備份頁詳情：`/backup_v2/:id`（單一產品與版本歷史）。
 
+## 備份頁目前行為
+
+- `BackupV2` 預設不顯示 `deleted` 商品。
+- 列表頁可用「顯示已刪除商品」切換帶入 `includeDeleted=1`。
+- `BackupDetail` 在 deleted 商品上會顯示「重新上架」按鈕。
+- 重新上架會呼叫 `POST /api/products/:id/recreate`，於 Shopify 建立一筆新的 `DRAFT` 商品，成功後跳轉到新商品詳情頁。
+
 ## 備份頁最新變更
 
 - `src/pages/BackupPage.jsx` 新增「僅組裝與上傳 (Fast Retry)」按鈕，對應後端 `POST /api/runStreamTest`。
@@ -49,4 +56,5 @@ npm run dev
 - `GET /api/products`
 - `GET /api/products/:id`
 - `GET /api/products/:id/versions`
+- `POST /api/products/:id/recreate`
 - `GET /api/amazon/stats`
