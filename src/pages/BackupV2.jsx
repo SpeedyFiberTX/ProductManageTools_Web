@@ -5,6 +5,14 @@ import BatchRestoreModal from "../component/BatchRestoreModal";
 
 const PAGE_SIZES = [20, 50, 100];
 
+function getStatusBadgeClass(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "active") return "bg-green-100 text-green-700";
+  if (normalized === "draft") return "bg-blue-100 text-blue-700";
+  if (normalized === "deleted") return "bg-red-100 text-red-700";
+  return "bg-slate-100 text-slate-700";
+}
+
 function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -37,6 +45,7 @@ export default function BackupV2() {
   const [selectAllMatching, setSelectAllMatching] = useState(false);
   const [showBatchRestore, setShowBatchRestore] = useState(false);
   const [countLoading, setCountLoading] = useState(false);
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const latestFetchIdRef = useRef(0);
 
   const offset = useMemo(() => (page - 1) * pageSize, [page, pageSize]);
@@ -59,6 +68,7 @@ export default function BackupV2() {
         offset: String(offset),
         ...(activeFilters.q ? { q: activeFilters.q } : {}),
         ...(activeFilters.collection ? { collection: activeFilters.collection } : {}),
+        ...(includeDeleted ? { includeDeleted: "1" } : {}),
       });
       const res = await getJson(`/api/products?${qs.toString()}`);
       if (latestFetchIdRef.current !== fetchId) return;
@@ -78,14 +88,14 @@ export default function BackupV2() {
 
   useEffect(() => {
     fetchList();
-  }, [page, pageSize, activeFilters.q, activeFilters.collection]);
+  }, [page, pageSize, activeFilters.q, activeFilters.collection, includeDeleted]);
 
   useEffect(() => {
     clearSelection();
     setItems([]);
     setTotalCount(null);
     setHasMore(false);
-  }, [activeFilters.q, activeFilters.collection]);
+  }, [activeFilters.q, activeFilters.collection, includeDeleted]);
 
   useEffect(() => {
     getJson("/api/collections?limit=500")
@@ -238,7 +248,8 @@ export default function BackupV2() {
   }
 
   function openDetail(item) {
-    navigate(`/backup_v2/${encodeURIComponent(item.id)}`);
+    const qs = includeDeleted ? "?includeDeleted=1" : "";
+    navigate(`/backup_v2/${encodeURIComponent(item.id)}${qs}`);
   }
 
   function toggleItemSelection(productId) {
@@ -274,6 +285,7 @@ export default function BackupV2() {
       const qs = new URLSearchParams({
         ...(activeFilters.q ? { q: activeFilters.q } : {}),
         ...(activeFilters.collection ? { collection: activeFilters.collection } : {}),
+        ...(includeDeleted ? { includeDeleted: "1" } : {}),
       });
       const res = await getJson(`/api/products/count?${qs.toString()}`);
       setTotalCount(Number(res.total) || 0);
@@ -406,6 +418,18 @@ export default function BackupV2() {
                 搜尋
               </button>
             </div>
+            <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={includeDeleted}
+                onChange={(e) => {
+                  setPage(1);
+                  setIncludeDeleted(e.target.checked);
+                }}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              顯示已刪除商品
+            </label>
             <label className="text-sm text-slate-600">
               每頁筆數
               <select
@@ -618,7 +642,7 @@ export default function BackupV2() {
                         <td className="px-5 py-3">
                           <button
                             onClick={() => openDetail(item)}
-                            className="text-left"
+                            className="cursor-pointer text-left"
                             title="點擊查看完整資料"
                           >
                             <div className="font-medium text-slate-800">{item.title || "—"}</div>
@@ -644,7 +668,9 @@ export default function BackupV2() {
                         </td>
                         <td className="px-5 py-3 text-slate-600">{item.productType || "—"}</td>
                         <td className="px-5 py-3">
-                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${getStatusBadgeClass(item.status)}`}
+                          >
                             {item.status || "—"}
                           </span>
                         </td>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 
 const TABS = [
@@ -8,10 +8,19 @@ const TABS = [
   { id: "metafields", label: "Metafields" },
 ];
 
+function getStatusBadgeClass(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "active") return "bg-green-100 text-green-700";
+  if (normalized === "draft") return "bg-blue-100 text-blue-700";
+  if (normalized === "deleted") return "bg-red-100 text-red-700";
+  return "bg-slate-100 text-slate-600";
+}
+
 export default function BackupDetail() {
   const { getJson, postJson } = useApi();
   const navigate = useNavigate();
   const { id: rawId } = useParams();
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState("overview");
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -28,6 +37,8 @@ export default function BackupDetail() {
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState("");
   const [restoreError, setRestoreError] = useState("");
+  const [recreateLoading, setRecreateLoading] = useState(false);
+  const [lastRequestId, setLastRequestId] = useState("");
 
   const productId = useMemo(() => {
     if (!rawId) return "";
@@ -38,11 +49,20 @@ export default function BackupDetail() {
     }
   }, [rawId]);
 
+  const includeDeleted = useMemo(() => {
+    const value = searchParams.get("includeDeleted");
+    return value === "1" || value === "true";
+  }, [searchParams]);
+
   const fetchDetail = async () => {
     if (!productId) return;
     setDetailLoading(true);
     setDetailError("");
-    return getJson(`/api/products/${encodeURIComponent(productId)}?full=1`)
+    const qs = new URLSearchParams({
+      full: "1",
+      ...(includeDeleted ? { includeDeleted: "1" } : {}),
+    });
+    return getJson(`/api/products/${encodeURIComponent(productId)}?${qs.toString()}`)
       .then((res) => {
         setDetail(res.item || null);
       })
@@ -69,7 +89,7 @@ export default function BackupDetail() {
   useEffect(() => {
     if (!productId) return;
     fetchDetail();
-  }, [productId]);
+  }, [productId, includeDeleted]);
 
   useEffect(() => {
     if (!productId) return;
@@ -84,6 +104,7 @@ export default function BackupDetail() {
   const selectedVersion = versions.find((v) => String(v.version_id) === String(selectedVersionId));
   const currentData = detail?.data || {};
   const data = selectedVersion?.data || currentData || {};
+  const isDeletedCurrentProduct = String(currentData?.status || "").toLowerCase() === "deleted";
   const restoreTargetText =
     selectedVersionId === "current" ? "Current（目前版本）" : `版本 #${selectedVersionId}`;
   const images = Array.isArray(data.images) ? data.images : [];
@@ -278,6 +299,7 @@ export default function BackupDetail() {
     setRestoreLoading(true);
     setRestoreMessage("");
     setRestoreError("");
+    setLastRequestId("");
 
     try {
       const payload = {
@@ -291,6 +313,7 @@ export default function BackupDetail() {
       const warnings = Array.isArray(res?.result?.warnings) ? res.result.warnings : [];
       const warnText = warnings.length ? `（警告 ${warnings.length} 項，已記錄到後端 log）` : "";
       setRestoreMessage((res?.message || "還原完成") + warnText);
+      setLastRequestId(res?.requestId || "");
 
       await Promise.all([fetchDetail(), fetchVersions()]);
       setSelectedVersionId("current");
@@ -302,6 +325,50 @@ export default function BackupDetail() {
     }
   };
 
+  const handleRecreate = async () => {
+    if (!productId || !isDeletedCurrentProduct) return;
+    if (!confirm(`確定要用 ${restoreTargetText} 重新上架嗎？\n此動作會在 Shopify 建立一筆新的 DRAFT 商品。`)) return;
+
+    setRecreateLoading(true);
+    setRestoreMessage("");
+    setRestoreError("");
+    setLastRequestId("");
+
+    try {
+      const payload = {
+        version_id: selectedVersionId === "current" ? null : Number(selectedVersionId),
+        applyVariants: true,
+        applyTranslations: true,
+        applyMetafields: true,
+        applyCollections: true,
+      };
+      const res = await postJson(`/api/products/${encodeURIComponent(productId)}/recreate`, payload);
+      const warnings = Array.isArray(res?.result?.warnings) ? res.result.warnings : [];
+      const warnText = warnings.length ? `（警告 ${warnings.length} 項，已記錄到後端 log）` : "";
+      setRestoreMessage((res?.message || "重新上架完成") + warnText);
+      setLastRequestId(res?.requestId || "");
+
+      const newProductId = res?.result?.productId;
+      if (newProductId) {
+        navigate(`/backup_v2/${encodeURIComponent(newProductId)}`);
+        return;
+      }
+
+      await Promise.all([fetchDetail(), fetchVersions()]);
+      setSelectedVersionId("current");
+    } catch (err) {
+      console.error(err);
+      setRestoreError(err.message || "重新上架失敗，請稍後再試");
+    } finally {
+      setRecreateLoading(false);
+    }
+  };
+
+  function handleOpenLogs() {
+    const qs = lastRequestId ? `?q=${encodeURIComponent(lastRequestId)}` : "";
+    navigate(`/operation_logs${qs}`);
+  }
+
   return (
     <>
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
@@ -311,17 +378,32 @@ export default function BackupDetail() {
           <div className="text-sm text-slate-500 mt-1">ID: {productId || "—"}</div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleRestore}
-            disabled={restoreLoading || detailLoading || versionsLoading}
-            className={`rounded-lg px-3 py-2 text-sm text-white ${
-              restoreLoading || detailLoading || versionsLoading
-                ? "bg-slate-400 cursor-not-allowed"
-                : "bg-amber-600 hover:bg-amber-700"
-            }`}
-          >
-            {restoreLoading ? "還原中..." : `還原到 ${restoreTargetText}`}
-          </button>
+          {isDeletedCurrentProduct && (
+            <button
+              onClick={handleRecreate}
+              disabled={recreateLoading || restoreLoading || detailLoading || versionsLoading}
+              className={`rounded-lg px-3 py-2 text-sm text-white ${
+                recreateLoading || restoreLoading || detailLoading || versionsLoading
+                  ? "bg-slate-400 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-700"
+              }`}
+            >
+              {recreateLoading ? "重新上架中..." : `重新上架 ${restoreTargetText}`}
+            </button>
+          )}
+          {!isDeletedCurrentProduct && (
+            <button
+              onClick={handleRestore}
+              disabled={recreateLoading || restoreLoading || detailLoading || versionsLoading}
+              className={`rounded-lg px-3 py-2 text-sm text-white ${
+                recreateLoading || restoreLoading || detailLoading || versionsLoading
+                  ? "bg-slate-400 cursor-not-allowed"
+                  : "bg-amber-600 hover:bg-amber-700"
+              }`}
+            >
+              {restoreLoading ? "還原中..." : `還原到 ${restoreTargetText}`}
+            </button>
+          )}
           <button
             onClick={() => navigate("/backup_v2")}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
@@ -333,7 +415,16 @@ export default function BackupDetail() {
 
       {restoreMessage && (
         <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {restoreMessage}
+          <div>{restoreMessage}</div>
+          {lastRequestId && (
+            <button
+              type="button"
+              onClick={handleOpenLogs}
+              className="mt-2 inline-flex items-center rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50"
+            >
+              查看結果紀錄
+            </button>
+          )}
         </div>
       )}
       {restoreError && (
@@ -453,13 +544,7 @@ export default function BackupDetail() {
                       <td className="py-2">
                         {data.status ? (
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              String(data.status).toLowerCase() === "active"
-                                ? "bg-green-100 text-green-700"
-                                : String(data.status).toLowerCase() === "draft"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-slate-100 text-slate-600"
-                            }`}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${getStatusBadgeClass(data.status)}`}
                           >
                             {data.status}
                           </span>
