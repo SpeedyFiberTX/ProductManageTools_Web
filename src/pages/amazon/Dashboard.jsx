@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useApi } from '../../lib/api';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
@@ -8,6 +9,7 @@ export default function AmazonDashboard() {
   const { getJson } = useApi();
   const [loading, setLoading] = useState(false);
   const [rawData, setRawData] = useState([]);
+  const [overlayHeight, setOverlayHeight] = useState(0);
 
   // --- 1. 狀態控制區 ---
   const [dateRange, setDateRange] = useState(() => {
@@ -22,7 +24,9 @@ export default function AmazonDashboard() {
 
   // 搜尋、排序、分頁狀態
   const [searchText, setSearchText] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: 'sales', direction: 'desc' });
+  const [channelFilter, setChannelFilter] = useState('all');
+  const [inventoryFilter, setInventoryFilter] = useState('all');
+  const [sortConfigs, setSortConfigs] = useState([{ key: 'sales', direction: 'desc' }]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10; // 每頁顯示 10 筆
 
@@ -31,6 +35,33 @@ export default function AmazonDashboard() {
     fetchData();
     setCurrentPage(1); // 切換日期時也回到第一頁，避免分頁也錯
   }, [dateRange.start, dateRange.end]);
+
+  useEffect(() => {
+    if (!loading) return undefined;
+
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const measureHeight = () => {
+      setOverlayHeight(
+        Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+          window.innerHeight
+        )
+      );
+    };
+
+    measureHeight();
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    window.addEventListener('resize', measureHeight);
+
+    return () => {
+      window.removeEventListener('resize', measureHeight);
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, [loading]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -116,6 +147,15 @@ export default function AmazonDashboard() {
   }, [rawData]);
 
   // --- 4. 列表邏輯 (搜尋 -> 排序 -> 分頁) ---
+  const channelOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        allProductsAggregated
+          .map(item => item.channel)
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b));
+  }, [allProductsAggregated]);
 
   const processedProducts = useMemo(() => {
     let data = [...allProductsAggregated];
@@ -129,34 +169,52 @@ export default function AmazonDashboard() {
       );
     }
 
-    // B. 排序功能
-    if (sortConfig.key) {
+    // B. 結構化篩選
+    if (channelFilter !== 'all') {
+      data = data.filter(p => p.channel === channelFilter);
+    }
+
+    if (inventoryFilter === 'in_stock') {
+      data = data.filter(p => (p.fba_inventory || 0) + (p.fbm_inventory || 0) > 0);
+    }
+
+    if (inventoryFilter === 'out_of_stock') {
+      data = data.filter(p => (p.fba_inventory || 0) + (p.fbm_inventory || 0) === 0);
+    }
+
+    // C. 多重排序
+    if (sortConfigs.length > 0) {
       data.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
+        for (const sortConfig of sortConfigs) {
+          let aValue = a[sortConfig.key];
+          let bValue = b[sortConfig.key];
 
-        // 特殊處理：如果是 title，處理空值
-        if (sortConfig.key === 'title') {
-          aValue = aValue || '';
-          bValue = bValue || '';
+          // 特殊處理：如果是字串欄位，處理空值
+          if (['title', 'channel'].includes(sortConfig.key)) {
+            aValue = aValue || '';
+            bValue = bValue || '';
+          }
+
+          // 字串比較
+          if (typeof aValue === 'string' || typeof bValue === 'string') {
+            const result = sortConfig.direction === 'asc'
+              ? String(aValue).localeCompare(String(bValue))
+              : String(bValue).localeCompare(String(aValue));
+
+            if (result !== 0) return result;
+            continue;
+          }
+
+          // 數字比較
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         }
-
-        // 字串比較
-        if (typeof aValue === 'string') {
-          return sortConfig.direction === 'asc'
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
-        }
-
-        // 數字比較
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
 
     return data;
-  }, [allProductsAggregated, searchText, sortConfig]);
+  }, [allProductsAggregated, searchText, channelFilter, inventoryFilter, sortConfigs]);
 
   // C. 分頁計算
   const totalItems = processedProducts.length;
@@ -170,28 +228,69 @@ export default function AmazonDashboard() {
   // 當搜尋條件改變時，重置回第一頁
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchText]);
+  }, [searchText, channelFilter, inventoryFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   // 排序切換處理
-  const handleSort = (key) => {
-    let direction = 'desc';
-    // 如果點擊相同欄位，且原本是 desc，則切換為 asc
-    if (sortConfig.key === key && sortConfig.direction === 'desc') {
-      direction = 'asc';
-    }
-    setSortConfig({ key, direction });
+  const handleSort = (key, additive = false) => {
+    setSortConfigs(prev => {
+      const existing = prev.find(item => item.key === key);
+      const nextDirection = existing?.direction === 'desc' ? 'asc' : 'desc';
+      const updatedItem = { key, direction: nextDirection };
+
+      if (!additive) {
+        return [updatedItem];
+      }
+
+      if (!existing) {
+        return [...prev, { key, direction: 'desc' }];
+      }
+
+      return prev.map(item => item.key === key ? updatedItem : item);
+    });
   };
 
   // 排序箭頭元件
   const SortIcon = ({ columnKey }) => {
-    if (sortConfig.key !== columnKey) return <span className="text-slate-300 ml-1 text-[10px]">↕</span>;
-    return sortConfig.direction === 'asc'
-      ? <span className="ml-1 text-indigo-600 text-[10px]">▲</span>
-      : <span className="ml-1 text-indigo-600 text-[10px]">▼</span>;
+    const currentSort = sortConfigs.find(item => item.key === columnKey);
+    const sortPriority = sortConfigs.findIndex(item => item.key === columnKey);
+
+    if (!currentSort) return <span className="text-slate-300 ml-1 text-[10px]">↕</span>;
+
+    return (
+      <span className="ml-1 inline-flex items-center gap-1 text-indigo-600 text-[10px]">
+        <span>{currentSort.direction === 'asc' ? '▲' : '▼'}</span>
+        {sortConfigs.length > 1 && <span>{sortPriority + 1}</span>}
+      </span>
+    );
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
+    <div className="relative max-w-7xl mx-auto p-6 space-y-8">
+      {loading && typeof document !== 'undefined' && createPortal(
+        <>
+          <div
+            className="absolute left-0 top-0 z-[80] w-full bg-white/80 backdrop-blur-[1px]"
+            style={{ height: `${overlayHeight || window.innerHeight}px` }}
+          />
+          <div className="fixed inset-0 z-[90] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-lg">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+              <div className="text-center">
+                <p className="text-sm font-semibold text-slate-700">資料載入中</p>
+                <p className="text-xs text-slate-500">正在更新 Amazon Dashboard，請稍候...</p>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
       {/* Header & Filter */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
         <div>
@@ -271,20 +370,46 @@ export default function AmazonDashboard() {
       {/* 商品報表與搜尋 */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h3 className="font-bold text-slate-700">商品銷售報表</h3>
+          <div>
+            <h3 className="font-bold text-slate-700">商品銷售報表</h3>
+            <p className="text-xs text-slate-400 mt-1">可直接搜尋，並用 Shift + 點擊欄位標題加入多重排序</p>
+          </div>
 
-          {/* 搜尋框 */}
-          <div className="relative w-full sm:w-72">
-            <input
-              type="text"
-              placeholder="搜尋 Title 或 ASIN..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm transition"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <div className="flex w-full sm:w-auto flex-col lg:flex-row gap-3">
+            {/* 搜尋框 */}
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                placeholder="搜尋 Title 或 ASIN..."
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm transition"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            <select
+              value={channelFilter}
+              onChange={(e) => setChannelFilter(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">全部 Channel</option>
+              {channelOptions.map(channel => (
+                <option key={channel} value={channel}>{channel}</option>
+              ))}
+            </select>
+
+            <select
+              value={inventoryFilter}
+              onChange={(e) => setInventoryFilter(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">全部庫存狀態</option>
+              <option value="in_stock">只看有庫存</option>
+              <option value="out_of_stock">只看缺貨</option>
+            </select>
           </div>
         </div>
 
@@ -292,28 +417,28 @@ export default function AmazonDashboard() {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
-                <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none w-[35%]" onClick={() => handleSort('title')}>
+                <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none w-[35%]" onClick={(e) => handleSort('title', e.shiftKey)}>
                   商品資訊 (ASIN / Title) <SortIcon columnKey="title" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('channel')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('channel', e.shiftKey)}>
                   Channel <SortIcon columnKey="channel" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('fba_inventory')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('fba_inventory', e.shiftKey)}>
                   FBA庫存 <SortIcon columnKey="fba_inventory" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('fbm_inventory')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('fbm_inventory', e.shiftKey)}>
                   FBM庫存 <SortIcon columnKey="fbm_inventory" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('sessions')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('sessions', e.shiftKey)}>
                   Sessions <SortIcon columnKey="sessions" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('page_views')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('page_views', e.shiftKey)}>
                   Page Views <SortIcon columnKey="page_views" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('units')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('units', e.shiftKey)}>
                   銷量 <SortIcon columnKey="units" />
                 </th>
-                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={() => handleSort('sales')}>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('sales', e.shiftKey)}>
                   金額 <SortIcon columnKey="sales" />
                 </th>
               </tr>
@@ -363,8 +488,8 @@ export default function AmazonDashboard() {
 
               {paginatedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                    {loading ? '載入數據中...' : '無符合條件的商品'}
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                    {loading ? '資料載入中...' : '無符合條件的商品'}
                   </td>
                 </tr>
               )}

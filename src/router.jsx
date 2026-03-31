@@ -1,52 +1,61 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
 // Layout
 import Frontend from "./layout/Frontend";
 
-// Shopify Pages
-import CreateProducts from "./pages/CreateProducts";
-import CreateVariants from "./pages/CreateVariants";
-import UpdateInventory from "./pages/UpdateInventory";
-import UpdateMetafields from "./pages/UpdateMetafields";
-import UpdateProducts from "./pages/UpdateProducts";
-import UpdateRelativeProducts from "./pages/UpdateRelativeProducts";
-import MatchMedia from "./pages/MatchMedia";
-import HandleChange from "./pages/HandleChange";
-import UpdateTranslation from "./pages/UpdateTranslation";
-import UpdateVariants from "./pages/UpdateVariants";
-import DeleteTranslate from "./pages/DeleteTranslate";
-import BackupV2 from "./pages/BackupV2";
-import BackupDetail from "./pages/BackupDetail";
-import Setup2FA from "./pages/Setup2FA";
-import UpdateProductsAllFlow from "./pages/UpdateProductsAllFlow";
-import OperationLogs from "./pages/OperationLogs";
-
-// Amazon Pages
-import AmazonDashboard from "./pages/amazon/Dashboard";
-import AmazonUpload from "./pages/amazon/Upload";
-
-// Tools Pages
-import Tools from "./pages/tools/Tools";
-// import AmazonContent from "./pages/tools/AmazonContent";
-import ShopifyPrice from "./pages/tools/ShopifyPrice";
-
-// 公開頁
-import LoginPage from "./pages/Login";
-import NotFound from "./pages/NotFound";
-
 // Auth & Context
 import RequireAuth from "./auth/RequireAuth";
 import { PlatformProvider } from "./stores/PlatformContext";
 
+const CreateProducts = lazy(() => import("./pages/CreateProducts"));
+const CreateVariants = lazy(() => import("./pages/CreateVariants"));
+const UpdateInventory = lazy(() => import("./pages/UpdateInventory"));
+const UpdateMetafields = lazy(() => import("./pages/UpdateMetafields"));
+const UpdateProducts = lazy(() => import("./pages/UpdateProducts"));
+const UpdateRelativeProducts = lazy(() => import("./pages/UpdateRelativeProducts"));
+const MatchMedia = lazy(() => import("./pages/MatchMedia"));
+const HandleChange = lazy(() => import("./pages/HandleChange"));
+const UpdateTranslation = lazy(() => import("./pages/UpdateTranslation"));
+const UpdateVariants = lazy(() => import("./pages/UpdateVariants"));
+const DeleteTranslate = lazy(() => import("./pages/DeleteTranslate"));
+const BackupV2 = lazy(() => import("./pages/BackupV2"));
+const BackupDetail = lazy(() => import("./pages/BackupDetail"));
+const Setup2FA = lazy(() => import("./pages/Setup2FA"));
+const UpdateProductsAllFlow = lazy(() => import("./pages/UpdateProductsAllFlow"));
+const OperationLogs = lazy(() => import("./pages/OperationLogs"));
+const AmazonDashboard = lazy(() => import("./pages/amazon/Dashboard"));
+const AmazonUpload = lazy(() => import("./pages/amazon/Upload"));
+const Tools = lazy(() => import("./pages/tools/Tools"));
+const ShopifyPrice = lazy(() => import("./pages/tools/ShopifyPrice"));
+const LoginPage = lazy(() => import("./pages/Login"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ShopifyCsvLayout = lazy(() => import("./layout/ShopifyCsvLayout"));
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center text-sm text-slate-500">
+      載入中...
+    </div>
+  );
+}
+
+function withSuspense(Component) {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Component />
+    </Suspense>
+  );
+}
+
 export const route = createBrowserRouter(
   [
     // 1) 公開的登入頁
-    { path: "/login", element: <LoginPage /> },
+    { path: "/login", element: withSuspense(LoginPage) },
 
     // 2) 受保護群組
     {
       element: (
-        // 🟢 包裹 PlatformProvider，讓裡面的 Header 和頁面都能拿到狀態
         <PlatformProvider>
           <RequireAuth />
         </PlatformProvider>
@@ -54,40 +63,40 @@ export const route = createBrowserRouter(
       children: [
         {
           path: "/",
-          element: <Frontend />, // 這裡面包含了 Header
+          element: <Frontend />,
           children: [
-            // === Shopify Routes ===
-            { index: true, element: <CreateProducts /> },
-            { path: "create_variants", element: <CreateVariants /> },
-            { path: "update_inventory", element: <UpdateInventory /> },
-            { path: "update_metafields", element: <UpdateMetafields /> },
-            { path: "update_products", element: <UpdateProducts /> },
-            { path: "update_relative_products", element: <UpdateRelativeProducts /> },
-            { path: "match_media", element: <MatchMedia /> },
-            { path: "handle_change", element: <HandleChange /> },
-            { path: "update_translation", element: <UpdateTranslation /> },
-            { path: "update_variants", element: <UpdateVariants /> },
-            { path: "delete_translate", element: <DeleteTranslate /> },
-            { path: "backup_v2", element: <BackupV2 /> },
-            { path: "backup_v2/:id", element: <BackupDetail /> },
-            { path: "setup_2fa", element: <Setup2FA /> },
-            { path: "update_products_all_flow", element: <UpdateProductsAllFlow></UpdateProductsAllFlow>},
-            { path: "operation_logs", element: <OperationLogs /> },
-
-            // === 🟢 Amazon Routes (新增) ===
-            { path: "amazon/dashboard", element: <AmazonDashboard /> },
-            { path: "amazon/upload", element: <AmazonUpload /> },
-            // Tools Routes
-            { path: "tools", element: <Tools></Tools> },
-            { path: "shopify_price", element: <ShopifyPrice></ShopifyPrice> },
-            // { path: "amazon_content", element: <AmazonContent></AmazonContent> },
+            {
+              element: withSuspense(ShopifyCsvLayout),
+              children: [
+                { index: true, element: withSuspense(CreateProducts) },
+                { path: "create_variants", element: withSuspense(CreateVariants) },
+                { path: "update_metafields", element: withSuspense(UpdateMetafields) },
+                { path: "update_products", element: withSuspense(UpdateProducts) },
+                { path: "update_relative_products", element: withSuspense(UpdateRelativeProducts) },
+                { path: "match_media", element: withSuspense(MatchMedia) },
+                { path: "handle_change", element: withSuspense(HandleChange) },
+                { path: "update_translation", element: withSuspense(UpdateTranslation) },
+                { path: "update_variants", element: withSuspense(UpdateVariants) },
+                { path: "delete_translate", element: withSuspense(DeleteTranslate) },
+                { path: "update_products_all_flow", element: withSuspense(UpdateProductsAllFlow) },
+              ],
+            },
+            { path: "update_inventory", element: withSuspense(UpdateInventory) },
+            { path: "backup_v2", element: withSuspense(BackupV2) },
+            { path: "backup_v2/:id", element: withSuspense(BackupDetail) },
+            { path: "setup_2fa", element: withSuspense(Setup2FA) },
+            { path: "operation_logs", element: withSuspense(OperationLogs) },
+            { path: "amazon/dashboard", element: withSuspense(AmazonDashboard) },
+            { path: "amazon/upload", element: withSuspense(AmazonUpload) },
+            { path: "tools", element: withSuspense(Tools) },
+            { path: "shopify_price", element: withSuspense(ShopifyPrice) },
           ],
         },
       ],
     },
 
     // 3) 404
-    { path: "*", element: <NotFound /> },
+    { path: "*", element: withSuspense(NotFound) },
   ],
   {
     basename: import.meta.env.BASE_URL,
