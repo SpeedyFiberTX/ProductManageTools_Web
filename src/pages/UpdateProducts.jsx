@@ -10,7 +10,6 @@ import Hero from "../component/Hero";
 import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
-import { pick } from "../utils/pick";
 import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
 import { useApi } from "../lib/api";
 
@@ -40,6 +39,16 @@ export default function UpdateProducts() {
   };
   const isChecked = (keys = []) => keys.every((k) => selectedKeys.has(k));
 
+  const buildSelectedPayload = (payload = {}, keys = []) => {
+    const out = {};
+    for (const key of keys) {
+      if (!key) continue;
+      const value = payload?.[key];
+      out[key] = value == null ? "" : value;
+    }
+    return out;
+  };
+
   /* ============ Modal 狀態（共用） ============ */
   const [showPreview, setShowPreview] = useState(false);
   const [modalSections, setModalSections] = useState(() => []);
@@ -67,7 +76,7 @@ export default function UpdateProducts() {
     const keys = Array.from(selectedKeys);
     if (!keys.length) return;
 
-    const body = [{ handle: currentProductPayload.handle, ...pick(currentProductPayload, keys) }];
+    const body = [{ handle: currentProductPayload.handle, ...buildSelectedPayload(currentProductPayload, keys) }];
     setModalSections([
       {
         id: "products",
@@ -85,7 +94,7 @@ export default function UpdateProducts() {
     const keys = Array.from(selectedKeys);
     if (!keys.length) return;
 
-    const body = (productPayloads || []).map((p) => ({ handle: p.handle, ...pick(p, keys) }));
+    const body = (productPayloads || []).map((p) => ({ handle: p.handle, ...buildSelectedPayload(p, keys) }));
     setModalSections([
       {
         id: "products",

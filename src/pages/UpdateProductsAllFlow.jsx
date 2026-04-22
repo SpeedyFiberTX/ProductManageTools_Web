@@ -16,24 +16,65 @@ import UpdateButtonRow from "../component/UpdateButtonRow";
 import ConfirmPreviewModal from "../component/ConfirmPreviewModal";
 import { SECTION_ORDER, COLUMN_ORDER } from "../config/previewSections";
 import { notifyAndOfferResultExport, postJsonWithResultLog } from "../utils/loggedApiSubmit";
-import { pick } from "../utils/pick";
 import { useApi } from "../lib/api";
 
 const VARIANTS_BLOCK_KEY = "__variants_block__";
+const PRODUCT_KEYS = new Set([
+  "title",
+  "description",
+  "description_type",
+  "Vendor",
+  "Type",
+  "Tags",
+  "SEO Title",
+  "SEO Description",
+  "Status",
+  "collections",
+  "Template",
+]);
+const TRANSLATION_KEYS = new Set([
+  "title",
+  "description",
+  "description_type",
+  "meta_description",
+  "theme.shipping_time",
+]);
+
+function getSelectedKeysForSection(selectedKeys = [], sectionId = "") {
+  const keys = Array.isArray(selectedKeys) ? selectedKeys.filter(Boolean) : [];
+  if (sectionId === "products") {
+    return keys.filter((k) => PRODUCT_KEYS.has(k));
+  }
+  if (sectionId === "metafields") {
+    return keys.filter((k) =>
+      k.startsWith("content.") ||
+      k.startsWith("filter.") ||
+      k.startsWith("table.") ||
+      k.startsWith("theme.") ||
+      k.startsWith("custom.") ||
+      k.startsWith("recommendation.")
+    );
+  }
+  if (sectionId === "translations") {
+    return keys.filter((k) => TRANSLATION_KEYS.has(k) || k.startsWith("content."));
+  }
+  return [];
+}
 
 function filterRowsBySelectedKeys(rows = [], selectedKeys = []) {
   const keys = Array.isArray(selectedKeys) ? selectedKeys.filter(Boolean) : [];
-  if (!keys.length) return Array.isArray(rows) ? rows : [];
+  if (!keys.length) return [];
 
   return (Array.isArray(rows) ? rows : [])
     .map((row) => {
-      const body = { handle: row?.handle, ...pick(row || {}, keys) };
+      const body = { handle: row?.handle };
+      for (const key of keys) {
+        const value = row?.[key];
+        body[key] = value == null ? "" : value;
+      }
       return body;
     })
-    .filter((row) => {
-      const rowKeys = Object.keys(row || {}).filter((k) => k !== "handle");
-      return row?.handle && rowKeys.length > 0;
-    });
+    .filter((row) => row?.handle);
 }
 
 function filterRowsByRowIndex(rows = [], targetRowIndex) {
@@ -94,6 +135,9 @@ export default function UpdateProductsAllFlow() {
 
   const requestPayloads = useMemo(() => {
     const selected = Array.from(selectedKeys);
+    const selectedProductKeys = getSelectedKeysForSection(selected, "products");
+    const selectedMetafieldKeys = getSelectedKeysForSection(selected, "metafields");
+    const selectedTranslationKeys = getSelectedKeysForSection(selected, "translations");
     const hasSelection = selected.length > 0;
     const isSelectedMode = submitMode !== "all_full";
     const sourceProducts = submitMode === "current_selected"
@@ -120,13 +164,13 @@ export default function UpdateProductsAllFlow() {
       hasSelection,
       submitMode,
       products: isSelectedMode
-        ? filterRowsBySelectedKeys(sourceProducts, selected)
+        ? filterRowsBySelectedKeys(sourceProducts, selectedProductKeys)
         : sourceProducts,
       metafields: isSelectedMode
-        ? filterRowsBySelectedKeys(sourceMetafields, selected)
+        ? filterRowsBySelectedKeys(sourceMetafields, selectedMetafieldKeys)
         : sourceMetafields,
       translations: isSelectedMode
-        ? filterRowsBySelectedKeys(sourceTranslations, selected)
+        ? filterRowsBySelectedKeys(sourceTranslations, selectedTranslationKeys)
         : sourceTranslations,
       // 變體 payload 目前後端 helper 依賴完整欄位做 update/delete/inventory，勾選模式下先採 all-or-nothing。
       variants: shouldSendVariants ? variantRows : [],

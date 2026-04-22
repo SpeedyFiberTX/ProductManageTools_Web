@@ -39,14 +39,19 @@ function resolveColumns(allRows = [], preferredColumns) {
 
 // 展平成純文字
 function mapRowsToFlat(rows, columns) {
-  const toCell = (v) => {
+  const toCell = (v, hasKey) => {
+    if (!hasKey) return undefined;
     if (v == null) return "";
     if (typeof v === "string" || typeof v === "number" || typeof v === "boolean")
       return String(v);
     try { return JSON.stringify(v); } catch { return String(v); }
   };
   return rows.map((r) =>
-    columns.reduce((acc, c) => ((acc[c] = toCell(r?.[c])), acc), {})
+    columns.reduce((acc, c) => {
+      const hasKey = !!r && Object.prototype.hasOwnProperty.call(r, c);
+      acc[c] = toCell(r?.[c], hasKey);
+      return acc;
+    }, {})
   );
 }
 
@@ -430,7 +435,9 @@ function AutoTable({ rows = [], preferredColumns, emptyText = "No data" }) {
                 <tr key={i} className="hover:bg-slate-50">
                   {columns.map((key) => (
                     <td key={key} className="px-3 py-2 whitespace-pre">
-                      {r[key]}
+                      {r[key] === ""
+                        ? <span className="text-slate-400">""</span>
+                        : (r[key] ?? "")}
                     </td>
                   ))}
                 </tr>
