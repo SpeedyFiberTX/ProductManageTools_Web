@@ -51,6 +51,16 @@ function firstIncludes(list, text) {
   return list.find(s => text.includes(s)) || null;
 }
 
+function normalizeConnector(conn, meta) {
+  if (!conn) return conn;
+  if (meta.connectors.includes(conn)) return conn;
+  if (conn.endsWith("O")) {
+    const short = conn.slice(0, -1);
+    if (meta.connectors.includes(short)) return short;
+  }
+  return conn;
+}
+
 /** 用動態 meta 解析 baseSku（長度優先；支援 ZH） */
 function parseSkuDynamic(baseSku = "", meta) {
   const upper = String(baseSku).toUpperCase();
@@ -58,7 +68,8 @@ function parseSkuDynamic(baseSku = "", meta) {
 
   const proto = pick(meta.protos, upper) ?? (upper.startsWith("MTP") ? "MTP" : "MPO");
   const count = pick(meta.counts, upper) ?? null;
-  const conn  = pick(meta.connectors, upper) ?? null;
+  const rawConn = pick(meta.connectors, upper) ?? null;
+  const conn = normalizeConnector(rawConn, meta);
 
   // ✅ 加入 ZH：SKU 若含 ZH，就去匹配含 ZH 的價格欄（例如 "NR,ZH"）
   let polish = null;
