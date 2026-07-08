@@ -97,7 +97,7 @@ function priceFromRowForSku(row, info) {
       if (!tokens.includes(info.polish)) continue;
     }
 
-    const price = Number((Number(String(priceRaw).replace(/[^\d.-]/g, "")) * 1.1).toFixed(2)); //TAA 貴1.1
+    const price = Number((Number(String(priceRaw).replace(/[^\d.-]/g, "")) * 1.2).toFixed(2)); //TAA 貴1.2
     if (Number.isFinite(price)) return price;
   }
   return null;
