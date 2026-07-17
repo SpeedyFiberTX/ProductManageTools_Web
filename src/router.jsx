@@ -26,7 +26,6 @@ const UpdateProductsAllFlow = lazy(() => import("./pages/UpdateProductsAllFlow")
 const OperationLogs = lazy(() => import("./pages/OperationLogs"));
 const AmazonDashboard = lazy(() => import("./pages/amazon/Dashboard"));
 const AmazonUpload = lazy(() => import("./pages/amazon/Upload"));
-const PchomeInventory = lazy(() => import("./pages/pchome/Inventory"));
 const Tools = lazy(() => import("./pages/tools/Tools"));
 const ShopifyPrice = lazy(() => import("./pages/tools/ShopifyPrice"));
 const LoginPage = lazy(() => import("./pages/Login"));
@@ -89,7 +88,6 @@ export const route = createBrowserRouter(
             { path: "operation_logs", element: withSuspense(OperationLogs) },
             { path: "amazon/dashboard", element: withSuspense(AmazonDashboard) },
             { path: "amazon/upload", element: withSuspense(AmazonUpload) },
-            { path: "pchome/inventory", element: withSuspense(PchomeInventory) },
             { path: "tools", element: withSuspense(Tools) },
             { path: "shopify_price", element: withSuspense(ShopifyPrice) },
           ],

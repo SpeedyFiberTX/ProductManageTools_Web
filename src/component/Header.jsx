@@ -24,11 +24,6 @@ const AMAZON_NAV = [
   { label: "📥 匯入報表", to: "/amazon/upload" },
 ];
 
-// 🟢 定義 PChome 選單 (新的)
-const PCHOME_NAV = [
-  { label: "📦 PChome 庫存", to: "/pchome/inventory" },
-];
-
 const TOOLS_NAV = [
   { label: "常規跳線成本計算工具", to: "/tools" },
   // { label: "Amazon 文案產生器", to: "/amazon_content" },
@@ -57,19 +52,11 @@ export default function Header() {
       ? '/'
       : newPlatform === 'amazon'
         ? '/amazon/dashboard'
-        : newPlatform === 'pchome'
-          ? '/pchome/inventory'
-          : '/tools');
+        : '/tools');
   };
 
   // 根據平台決定顯示哪個選單
-  const navItems = platform === 'shopify'
-    ? SHOPIFY_NAV
-    : platform === 'amazon'
-      ? AMAZON_NAV
-      : platform === 'pchome'
-        ? PCHOME_NAV
-        : TOOLS_NAV;
+  const navItems = platform === 'shopify' ? SHOPIFY_NAV : platform === 'amazon' ?AMAZON_NAV : TOOLS_NAV;
   const shopifyRightNavLabels = new Set(["結果紀錄", "產品備份"]);
   const shopifyPrimaryNav = platform === "shopify"
     ? navItems.filter((item) => !shopifyRightNavLabels.has(item.label))
@@ -120,7 +107,6 @@ export default function Header() {
           >
             <option value="shopify">🛍️ Shopify</option>
             <option value="amazon">📦 Amazon</option>
-            <option value="pchome">🛒 PChome</option>
             <option value="tools">🔨 Tools</option>
           </select>
         </div>

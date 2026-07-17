@@ -3,14 +3,10 @@ import { useAuth } from '../auth/AuthContext';
 
 // ✅ 同網域就用空字串，跨網域就填完整 origin
 const API_BASE =  import.meta.env.VITE_API_BASE;
-// ✅ 後端若需要 API Key，設定 VITE_API_KEY 後會自動帶上 X-API-Key
-const API_KEY = import.meta.env.VITE_API_KEY;
 // 去重複用的 refresh promise，避免同時多個 401 重複打 refresh
 let refreshPromise: Promise<{ ok: boolean; accessToken: string | null }> | null = null;
 
 function joinURL(base: string, path: string) {
-  // 若 path 已是完整網址（http/https），直接使用，忽略 base
-  if (/^https?:\/\//i.test(path)) return path;
   if (!base) return path.startsWith('/') ? path : `/${path}`;
   const b = base.endsWith('/') ? base.slice(0, -1) : base;
   const p = path.startsWith('/') ? path : `/${path}`;
@@ -36,15 +32,9 @@ export function useApi() {
       headers.set('Authorization', `Bearer ${tokenToUse}`);
     }
 
-    // Add X-API-Key header if configured and not already set
-    if (API_KEY && !headers.has('X-API-Key')) {
-      headers.set('X-API-Key', API_KEY);
-    }
-
     return fetch(url, {
       ...init,
-      // 預設帶 cookie（主後端 refresh 需要）；可由 init.credentials 覆寫，例如跨網域 API 用 'omit'
-      credentials: init.credentials ?? 'include',
+      credentials: 'include', // ← 必須，才會帶 cookie
       headers,
     });
   }
