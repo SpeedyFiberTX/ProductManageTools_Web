@@ -20,6 +20,10 @@ const SHIPTYPE_ORDER = {
 const shiptypeRank = (value) =>
   value in SHIPTYPE_ORDER ? SHIPTYPE_ORDER[value] : 99;
 
+// 只有「轉單」商品可以修改庫存
+const EDITABLE_SHIPTYPE = 'Trans';
+const isEditableItem = (item) => item?.shiptype === EDITABLE_SHIPTYPE;
+
 export default function PchomeInventory() {
   const { getJson, postJson } = useApi();
   const [loading, setLoading] = useState(false);
@@ -36,9 +40,10 @@ export default function PchomeInventory() {
   const pageSize = 20;
 
   // 庫存編輯狀態
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState(null); // 目前開啟輸入框的列（一次只能一列）
   const [editValue, setEditValue] = useState('');
-  const [savingId, setSavingId] = useState(null);
+  const [edits, setEdits] = useState({}); // 待送出的變更 { [id]: newQty }
+  const [submitting, setSubmitting] = useState(false);
 
   // --- 資料讀取 ---
   const fetchData = async () => {
@@ -51,6 +56,10 @@ export default function PchomeInventory() {
         credentials: 'omit',
       });
       setItems(Array.isArray(res?.items) ? res.items : []);
+      // 重新載入資料後，清掉尚未送出的編輯狀態，避免對應到舊資料
+      setEdits({});
+      setEditingId(null);
+      setEditValue('');
     } catch (err) {
       console.error(err);
       setItems([]);
@@ -194,10 +203,15 @@ export default function PchomeInventory() {
     });
   };
 
-  // --- 庫存編輯 ---
+  // --- 庫存編輯（先累積變更，最後一次送出） ---
+  const editCount = Object.keys(edits).length;
+
   const startEdit = (item) => {
+    if (!isEditableItem(item)) return;
     setEditingId(item.id);
-    setEditValue(String(item.qty ?? ''));
+    // 若已有待送出變更，帶入該值，否則帶原值
+    const current = item.id in edits ? edits[item.id] : item.qty;
+    setEditValue(String(current ?? ''));
   };
 
   const cancelEdit = () => {
@@ -205,33 +219,66 @@ export default function PchomeInventory() {
     setEditValue('');
   };
 
-  const saveEdit = async (item) => {
+  // 確認單列變更 → 存入待送出清單（尚未呼叫 API）
+  const confirmEdit = (item) => {
     const nextQty = Number(editValue);
     if (!Number.isInteger(nextQty) || nextQty < 0) {
       alert('請輸入 0 或正整數的庫存數量。');
       return;
     }
-    if (nextQty === Number(item.qty)) {
-      cancelEdit();
-      return;
-    }
+    setEdits((prev) => {
+      const copy = { ...prev };
+      if (nextQty === Number(item.qty)) {
+        delete copy[item.id]; // 與原值相同 → 視為未變更
+      } else {
+        copy[item.id] = nextQty;
+      }
+      return copy;
+    });
+    cancelEdit();
+  };
 
-    setSavingId(item.id);
+  // 還原單列的待送出變更
+  const revertEdit = (id) => {
+    setEdits((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+  };
+
+  // 清除全部待送出變更
+  const clearAllEdits = () => {
+    if (editCount === 0) return;
+    if (!confirm('確定要清除所有尚未送出的庫存變更嗎？')) return;
+    setEdits({});
+    cancelEdit();
+  };
+
+  // 一次送出所有待送出變更
+  const submitEdits = async () => {
+    if (editCount === 0) return;
+    if (!confirm(`確定要送出 ${editCount} 筆庫存變更嗎？`)) return;
+
+    setSubmitting(true);
     try {
-      // TODO: 更新庫存 API 尚未完成，待後端提供後改為實際呼叫，例如：
-      // await postJson(`${PCHOME_API_BASE}/inventory/pchome/${item.id}`, { qty: nextQty }, { credentials: 'omit' });
-      console.warn('[PChome] 更新庫存 API 尚未串接，暫時只更新前端顯示', { id: item.id, qty: nextQty });
+      const payload = Object.entries(edits).map(([id, qty]) => ({ id, qty }));
+
+      // TODO: 批次更新庫存 API 尚未完成，待後端提供後改為實際呼叫，例如：
+      // await postJson(`${PCHOME_API_BASE}/inventory/pchome/batch`, { items: payload }, { credentials: 'omit' });
+      console.warn('[PChome] 批次更新庫存 API 尚未串接，暫時只更新前端顯示', payload);
 
       // 先在前端更新顯示（API 完成後改由回傳結果或重新 fetch 更新）
       setItems((prev) =>
-        prev.map((it) => (it.id === item.id ? { ...it, qty: nextQty } : it))
+        prev.map((it) => (it.id in edits ? { ...it, qty: edits[it.id] } : it))
       );
+      setEdits({});
       cancelEdit();
     } catch (err) {
       console.error(err);
-      alert('更新失敗，請稍後再試。');
+      alert('送出失敗，請稍後再試。');
     } finally {
-      setSavingId(null);
+      setSubmitting(false);
     }
   };
 
@@ -276,13 +323,31 @@ export default function PchomeInventory() {
           <h1 className="text-2xl font-bold text-slate-800">PChome 庫存</h1>
           <p className="text-slate-500 text-sm">數據來源：PChome 庫存 API</p>
         </div>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition"
-        >
-          🔄 重新整理
-        </button>
+        <div className="flex items-center gap-2">
+          {editCount > 0 && (
+            <button
+              onClick={clearAllEdits}
+              disabled={submitting}
+              className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition"
+            >
+              清除變更
+            </button>
+          )}
+          <button
+            onClick={submitEdits}
+            disabled={submitting || editCount === 0}
+            className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            {submitting ? '送出中...' : `送出修改${editCount > 0 ? ` (${editCount})` : ''}`}
+          </button>
+          <button
+            onClick={fetchData}
+            disabled={loading || submitting}
+            className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition"
+          >
+            🔄 重新整理
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -293,7 +358,7 @@ export default function PchomeInventory() {
 
       {/* 更新 API 尚未完成的提醒 */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-        ⚠️ 更新庫存 API 尚未完成，目前「修改庫存」只會更新畫面顯示，重新整理後會還原、不會寫回後端。
+        ⚠️ 更新庫存 API 尚未完成。目前僅「轉單」商品可修改庫存，變更會先累積，按「送出修改」後也只會更新畫面顯示，重新整理後會還原、不會寫回後端。
       </div>
 
       {/* KPI Cards */}
@@ -373,16 +438,23 @@ export default function PchomeInventory() {
 
             <tbody className="divide-y divide-slate-100">
               {paginatedItems.map((it) => {
-                const qty = Number(it.qty) || 0;
+                const originalQty = Number(it.qty) || 0;
                 const isEditing = editingId === it.id;
-                const isSaving = savingId === it.id;
+                const editable = isEditableItem(it);
+                const hasPending = it.id in edits;
+                const displayQty = hasPending ? Number(edits[it.id]) : originalQty;
                 return (
-                  <tr key={it.id} className={`transition ${isEditing ? 'bg-indigo-50/60' : 'hover:bg-slate-50'}`}>
+                  <tr
+                    key={it.id}
+                    className={`transition ${
+                      isEditing ? 'bg-indigo-50/60' : hasPending ? 'bg-amber-50/60' : 'hover:bg-slate-50'
+                    }`}
+                  >
                     <td className="px-6 py-3 font-mono text-xs text-slate-700">{it.id}</td>
                     <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.vendor_pid}</td>
                     <td className="px-6 py-3 text-slate-700">{it.name}</td>
                     <td className="px-6 py-3 text-slate-600">{shiptypeLabel(it.shiptype)}</td>
-                    <td className={`px-6 py-3 text-right font-semibold ${qty <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                    <td className="px-6 py-3 text-right font-semibold">
                       {isEditing ? (
                         <input
                           type="number"
@@ -392,41 +464,62 @@ export default function PchomeInventory() {
                           autoFocus
                           onChange={(e) => setEditValue(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveEdit(it);
+                            if (e.key === 'Enter') confirmEdit(it);
                             if (e.key === 'Escape') cancelEdit();
                           }}
                           className="w-24 px-2 py-1 text-right rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 font-mono"
                         />
+                      ) : hasPending ? (
+                        <span className="inline-flex items-center justify-end gap-2">
+                          <span className="text-slate-400 line-through font-normal">{originalQty.toLocaleString()}</span>
+                          <span className="text-amber-600">➜</span>
+                          <span className={displayQty <= 0 ? 'text-red-500' : 'text-emerald-600'}>
+                            {displayQty.toLocaleString()}
+                          </span>
+                        </span>
                       ) : (
-                        qty.toLocaleString()
+                        <span className={displayQty <= 0 ? 'text-red-500' : 'text-emerald-600'}>
+                          {displayQty.toLocaleString()}
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-3 text-center whitespace-nowrap">
                       {isEditing ? (
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => saveEdit(it)}
-                            disabled={isSaving}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+                            onClick={() => confirmEdit(it)}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition"
                           >
-                            {isSaving ? '儲存中...' : '儲存'}
+                            確認
                           </button>
                           <button
                             onClick={cancelEdit}
-                            disabled={isSaving}
-                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 bg-white text-xs hover:bg-slate-50 disabled:opacity-50 transition"
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 bg-white text-xs hover:bg-slate-50 transition"
                           >
                             取消
                           </button>
                         </div>
+                      ) : !editable ? (
+                        <span className="text-xs text-slate-400">不可修改</span>
                       ) : (
-                        <button
-                          onClick={() => startEdit(it)}
-                          disabled={editingId !== null}
-                          className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 bg-white text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >
-                          修改庫存
-                        </button>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => startEdit(it)}
+                            disabled={editingId !== null || submitting}
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 bg-white text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                          >
+                            {hasPending ? '再次修改' : '修改庫存'}
+                          </button>
+                          {hasPending && (
+                            <button
+                              onClick={() => revertEdit(it.id)}
+                              disabled={editingId !== null || submitting}
+                              className="px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 bg-white text-xs hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                              還原
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
