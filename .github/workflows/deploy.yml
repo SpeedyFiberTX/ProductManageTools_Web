@@ -20,6 +20,7 @@ jobs:
     env:
       # ✅ 這裡把 GitHub Secrets 的值注入給 Vite 使用
       VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+      VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
     steps:
       - name: Checkout code
