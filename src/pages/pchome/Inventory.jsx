@@ -21,7 +21,7 @@ const shiptypeRank = (value) =>
   value in SHIPTYPE_ORDER ? SHIPTYPE_ORDER[value] : 99;
 
 export default function PchomeInventory() {
-  const { getJson } = useApi();
+  const { getJson, postJson } = useApi();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [items, setItems] = useState([]);
@@ -34,6 +34,11 @@ export default function PchomeInventory() {
   const [sortConfigs, setSortConfigs] = useState([{ key: 'qty', direction: 'desc' }]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+
+  // 庫存編輯狀態
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [savingId, setSavingId] = useState(null);
 
   // --- 資料讀取 ---
   const fetchData = async () => {
@@ -111,8 +116,7 @@ export default function PchomeInventory() {
       data = data.filter((it) =>
         String(it.id || '').toLowerCase().includes(lower) ||
         String(it.vendor_pid || '').toLowerCase().includes(lower) ||
-        String(it.name || '').toLowerCase().includes(lower) ||
-        String(it.group_id || '').toLowerCase().includes(lower)
+        String(it.name || '').toLowerCase().includes(lower)
       );
     }
 
@@ -190,6 +194,47 @@ export default function PchomeInventory() {
     });
   };
 
+  // --- 庫存編輯 ---
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditValue(String(item.qty ?? ''));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const saveEdit = async (item) => {
+    const nextQty = Number(editValue);
+    if (!Number.isInteger(nextQty) || nextQty < 0) {
+      alert('請輸入 0 或正整數的庫存數量。');
+      return;
+    }
+    if (nextQty === Number(item.qty)) {
+      cancelEdit();
+      return;
+    }
+
+    setSavingId(item.id);
+    try {
+      // TODO: 更新庫存 API 尚未完成，待後端提供後改為實際呼叫，例如：
+      // await postJson(`${PCHOME_API_BASE}/inventory/pchome/${item.id}`, { qty: nextQty }, { credentials: 'omit' });
+      console.warn('[PChome] 更新庫存 API 尚未串接，暫時只更新前端顯示', { id: item.id, qty: nextQty });
+
+      // 先在前端更新顯示（API 完成後改由回傳結果或重新 fetch 更新）
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, qty: nextQty } : it))
+      );
+      cancelEdit();
+    } catch (err) {
+      console.error(err);
+      alert('更新失敗，請稍後再試。');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const SortIcon = ({ columnKey }) => {
     const currentSort = sortConfigs.find((item) => item.key === columnKey);
     const sortPriority = sortConfigs.findIndex((item) => item.key === columnKey);
@@ -245,6 +290,11 @@ export default function PchomeInventory() {
           {error}
         </div>
       )}
+
+      {/* 更新 API 尚未完成的提醒 */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        ⚠️ 更新庫存 API 尚未完成，目前「修改庫存」只會更新畫面顯示，重新整理後會還原、不會寫回後端。
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -311,30 +361,73 @@ export default function PchomeInventory() {
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none" onClick={(e) => handleSort('name', e.shiftKey)}>
                   名稱 <SortIcon columnKey="name" />
                 </th>
-                <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('group_id', e.shiftKey)}>
-                  群組 ID <SortIcon columnKey="group_id" />
-                </th>
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('shiptype', e.shiftKey)}>
                   出貨方式 <SortIcon columnKey="shiptype" />
                 </th>
                 <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('qty', e.shiftKey)}>
                   庫存量 <SortIcon columnKey="qty" />
                 </th>
+                <th className="px-6 py-3 text-center select-none whitespace-nowrap">操作</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100">
               {paginatedItems.map((it) => {
                 const qty = Number(it.qty) || 0;
+                const isEditing = editingId === it.id;
+                const isSaving = savingId === it.id;
                 return (
-                  <tr key={it.id} className="hover:bg-slate-50 transition">
+                  <tr key={it.id} className={`transition ${isEditing ? 'bg-indigo-50/60' : 'hover:bg-slate-50'}`}>
                     <td className="px-6 py-3 font-mono text-xs text-slate-700">{it.id}</td>
                     <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.vendor_pid}</td>
                     <td className="px-6 py-3 text-slate-700">{it.name}</td>
-                    <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.group_id}</td>
                     <td className="px-6 py-3 text-slate-600">{shiptypeLabel(it.shiptype)}</td>
                     <td className={`px-6 py-3 text-right font-semibold ${qty <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                      {qty.toLocaleString()}
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={editValue}
+                          autoFocus
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveEdit(it);
+                            if (e.key === 'Escape') cancelEdit();
+                          }}
+                          className="w-24 px-2 py-1 text-right rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 font-mono"
+                        />
+                      ) : (
+                        qty.toLocaleString()
+                      )}
+                    </td>
+                    <td className="px-6 py-3 text-center whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => saveEdit(it)}
+                            disabled={isSaving}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+                          >
+                            {isSaving ? '儲存中...' : '儲存'}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            disabled={isSaving}
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 bg-white text-xs hover:bg-slate-50 disabled:opacity-50 transition"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(it)}
+                          disabled={editingId !== null}
+                          className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 bg-white text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                          修改庫存
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
