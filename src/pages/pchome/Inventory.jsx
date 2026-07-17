@@ -5,6 +5,21 @@ import { useApi } from '../../lib/api';
 // PChome 庫存 API 與主後端不同網域，獨立設定 base
 const PCHOME_API_BASE = import.meta.env.VITE_PCHOME_API_BASE;
 
+// 出貨方式顯示對應
+const SHIPTYPE_LABELS = {
+  Trans: '轉單',
+  Consign: '寄倉',
+};
+const shiptypeLabel = (value) => SHIPTYPE_LABELS[value] || value;
+
+// 出貨方式排序順序（寄倉 在 轉單 前面）
+const SHIPTYPE_ORDER = {
+  Consign: 0,
+  Trans: 1,
+};
+const shiptypeRank = (value) =>
+  value in SHIPTYPE_ORDER ? SHIPTYPE_ORDER[value] : 99;
+
 export default function PchomeInventory() {
   const { getJson } = useApi();
   const [loading, setLoading] = useState(false);
@@ -15,6 +30,7 @@ export default function PchomeInventory() {
   // 搜尋 / 排序 / 分頁
   const [searchText, setSearchText] = useState('');
   const [stockFilter, setStockFilter] = useState('all');
+  const [shiptypeFilter, setShiptypeFilter] = useState('all');
   const [sortConfigs, setSortConfigs] = useState([{ key: 'qty', direction: 'desc' }]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
@@ -80,6 +96,12 @@ export default function PchomeInventory() {
     return { totalItems, totalQty, outOfStock };
   }, [items]);
 
+  // 出貨方式選項（依資料動態產生，並依自訂順序排序）
+  const shiptypeOptions = useMemo(() => {
+    return Array.from(new Set(items.map((it) => it.shiptype).filter(Boolean)))
+      .sort((a, b) => shiptypeRank(a) - shiptypeRank(b));
+  }, [items]);
+
   // --- 列表邏輯 (搜尋 -> 篩選 -> 排序) ---
   const processedItems = useMemo(() => {
     let data = [...items];
@@ -100,6 +122,10 @@ export default function PchomeInventory() {
       data = data.filter((it) => (Number(it.qty) || 0) <= 0);
     }
 
+    if (shiptypeFilter !== 'all') {
+      data = data.filter((it) => it.shiptype === shiptypeFilter);
+    }
+
     if (sortConfigs.length > 0) {
       data.sort((a, b) => {
         for (const sortConfig of sortConfigs) {
@@ -109,6 +135,10 @@ export default function PchomeInventory() {
           if (sortConfig.key === 'qty') {
             aValue = Number(aValue) || 0;
             bValue = Number(bValue) || 0;
+          } else if (sortConfig.key === 'shiptype') {
+            // 依自訂順序排序：寄倉(Consign) 在 轉單(Trans) 前面
+            aValue = shiptypeRank(aValue);
+            bValue = shiptypeRank(bValue);
           } else {
             aValue = aValue || '';
             bValue = bValue || '';
@@ -130,7 +160,7 @@ export default function PchomeInventory() {
     }
 
     return data;
-  }, [items, searchText, stockFilter, sortConfigs]);
+  }, [items, searchText, stockFilter, shiptypeFilter, sortConfigs]);
 
   const totalCount = processedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
@@ -142,7 +172,7 @@ export default function PchomeInventory() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchText, stockFilter]);
+  }, [searchText, stockFilter, shiptypeFilter]);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -254,6 +284,17 @@ export default function PchomeInventory() {
               <option value="in_stock">只看有庫存</option>
               <option value="out_of_stock">只看缺貨</option>
             </select>
+
+            <select
+              value={shiptypeFilter}
+              onChange={(e) => setShiptypeFilter(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">全部出貨方式</option>
+              {shiptypeOptions.map((st) => (
+                <option key={st} value={st}>{shiptypeLabel(st)}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -291,7 +332,7 @@ export default function PchomeInventory() {
                     <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.vendor_pid}</td>
                     <td className="px-6 py-3 text-slate-700">{it.name}</td>
                     <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.group_id}</td>
-                    <td className="px-6 py-3 text-slate-600">{it.shiptype}</td>
+                    <td className="px-6 py-3 text-slate-600">{shiptypeLabel(it.shiptype)}</td>
                     <td className={`px-6 py-3 text-right font-semibold ${qty <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>
                       {qty.toLocaleString()}
                     </td>
