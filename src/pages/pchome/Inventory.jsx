@@ -113,7 +113,11 @@ export default function PchomeInventory() {
     const totalItems = items.length;
     const outOfStock = items.filter((it) => (Number(it.qty) || 0) <= 0).length;
     const ecountOutOfStock = items.filter((it) => getEcountQty(it) <= 0).length;
-    return { totalItems, outOfStock, ecountOutOfStock };
+    // 庫存量大於 ECOUNT 庫存量 → 待修改
+    const needsFix = items.filter((it) =>
+      isOverEcount(Number(it.qty) || 0, getEcountQty(it))
+    ).length;
+    return { totalItems, outOfStock, ecountOutOfStock, needsFix };
   }, [items]);
 
   // 出貨方式選項（依資料動態產生，並依自訂順序排序）
@@ -140,6 +144,8 @@ export default function PchomeInventory() {
       data = data.filter((it) => (Number(it.qty) || 0) > 0 && getEcountQty(it) > 0);
     } else if (stockFilter === 'out_of_stock') {
       data = data.filter((it) => (Number(it.qty) || 0) <= 0 || getEcountQty(it) <= 0);
+    } else if (stockFilter === 'needs_fix') {
+      data = data.filter((it) => isOverEcount(Number(it.qty) || 0, getEcountQty(it)));
     }
 
     if (shiptypeFilter !== 'all') {
@@ -384,10 +390,11 @@ export default function PchomeInventory() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <KPICard title="品項數" value={kpi.totalItems.toLocaleString()} color="text-blue-600" />
         <KPICard title="ECOUNT 缺貨品項" value={kpi.ecountOutOfStock.toLocaleString()} color="text-orange-600" />
         <KPICard title="缺貨品項" value={kpi.outOfStock.toLocaleString()} color="text-red-600" />
+        <KPICard title="庫存量待修改" value={kpi.needsFix.toLocaleString()} color="text-rose-600" />
       </div>
 
       {/* 表格 */}
@@ -420,6 +427,7 @@ export default function PchomeInventory() {
               <option value="all">全部庫存狀態</option>
               <option value="in_stock">只看有庫存</option>
               <option value="out_of_stock">只看缺貨</option>
+              <option value="needs_fix">庫存量待修改</option>
             </select>
 
             <select
