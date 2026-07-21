@@ -30,6 +30,15 @@ const getEcountQty = (item) => Number(item?.ecount_qty) || 0;
 // 庫存量不可大於 ECOUNT 庫存量
 const isOverEcount = (qty, ecountQty) => Number(qty) > ecountQty;
 
+// 預設排序優先序：庫存量待修改 → 缺貨 → 其它
+const statusRank = (item) => {
+  const qty = Number(item?.qty) || 0;
+  const ecount = getEcountQty(item);
+  if (isOverEcount(qty, ecount)) return 0; // 庫存量待修改
+  if (qty <= 0 || ecount <= 0) return 1; // 缺貨（庫存量或 ECOUNT 任一缺貨）
+  return 2; // 其它
+};
+
 export default function PchomeInventory() {
   const { getJson, postJson } = useApi();
   const [loading, setLoading] = useState(false);
@@ -41,7 +50,8 @@ export default function PchomeInventory() {
   const [searchText, setSearchText] = useState('');
   const [stockFilter, setStockFilter] = useState('all');
   const [shiptypeFilter, setShiptypeFilter] = useState('all');
-  const [sortConfigs, setSortConfigs] = useState([{ key: 'qty', direction: 'desc' }]);
+  // 預設排序：庫存量待修改 → 缺貨 → 其它
+  const [sortConfigs, setSortConfigs] = useState([{ key: 'status', direction: 'asc' }]);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
@@ -158,7 +168,11 @@ export default function PchomeInventory() {
           let aValue = a[sortConfig.key];
           let bValue = b[sortConfig.key];
 
-          if (sortConfig.key === 'qty' || sortConfig.key === 'ecount_qty') {
+          if (sortConfig.key === 'status') {
+            // 依狀態優先序排序（待修改 → 缺貨 → 其它）
+            aValue = statusRank(a);
+            bValue = statusRank(b);
+          } else if (sortConfig.key === 'qty' || sortConfig.key === 'ecount_qty') {
             aValue = Number(aValue) || 0;
             bValue = Number(bValue) || 0;
           } else if (sortConfig.key === 'shiptype') {
