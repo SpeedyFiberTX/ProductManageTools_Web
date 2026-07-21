@@ -289,22 +289,55 @@ export default function PchomeInventory() {
     if (!confirm(`確定要送出 ${editCount} 筆庫存變更嗎？`)) return;
 
     setSubmitting(true);
+    setError('');
     try {
-      const payload = Object.entries(edits).map(([id, qty]) => ({ id, qty }));
-
-      // TODO: 批次更新庫存 API 尚未完成，待後端提供後改為實際呼叫，例如：
-      // await postJson(`${PCHOME_API_BASE}/inventory/pchome/batch`, { items: payload }, { credentials: 'omit' });
-      console.warn('[PChome] 批次更新庫存 API 尚未串接，暫時只更新前端顯示', payload);
-
-      // 先在前端更新顯示（API 完成後改由回傳結果或重新 fetch 更新）
-      setItems((prev) =>
-        prev.map((it) => (it.id in edits ? { ...it, qty: edits[it.id] } : it))
+      const payload = Object.entries(edits).map(([id, qty]) => ({ id, qty: Number(qty) }));
+      const res = await postJson(
+        `${PCHOME_API_BASE}/inventory/pchome/update`,
+        { items: payload },
+        { credentials: 'omit' }
       );
-      setEdits({});
+
+      const succeeded = Array.isArray(res?.succeeded) ? res.succeeded : [];
+      const failed = Array.isArray(res?.failed) ? res.failed : [];
+      // 後端若未回傳明細，success=true 視為全部成功
+      const treatAllAsSuccess =
+        res?.success === true && succeeded.length === 0 && failed.length === 0;
+
+      // 更新成功品項的庫存量
+      const succeededQty = new Map(
+        succeeded.map((s) => [s.id, s.qty === undefined ? edits[s.id] : Number(s.qty)])
+      );
+      setItems((prev) =>
+        prev.map((it) => {
+          if (treatAllAsSuccess && it.id in edits) return { ...it, qty: Number(edits[it.id]) };
+          if (succeededQty.has(it.id)) return { ...it, qty: succeededQty.get(it.id) };
+          return it;
+        })
+      );
+
+      // 只保留失敗的變更，讓使用者可以修正後重送
+      setEdits((prev) => {
+        if (treatAllAsSuccess) return {};
+        const next = {};
+        Object.entries(prev).forEach(([id, qty]) => {
+          if (!succeededQty.has(id)) next[id] = qty;
+        });
+        return next;
+      });
       cancelEdit();
+
+      if (failed.length > 0) {
+        const detail = failed
+          .map((f) => `・${f.id}：${f.message || f.code || '更新失敗'}`)
+          .join('\n');
+        alert(`${res?.message || '部分更新失敗'}\n\n失敗明細：\n${detail}`);
+      } else {
+        alert(res?.message || `成功更新 ${succeeded.length || payload.length} 筆庫存。`);
+      }
     } catch (err) {
       console.error(err);
-      alert('送出失敗，請稍後再試。');
+      alert(`送出失敗：${err?.message || '請稍後再試。'}`);
     } finally {
       setSubmitting(false);
     }
@@ -384,9 +417,9 @@ export default function PchomeInventory() {
         </div>
       )}
 
-      {/* 更新 API 尚未完成的提醒 */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-        ⚠️ 更新庫存 API 尚未完成。目前僅「轉單」商品可修改庫存，變更會先累積，按「送出修改」後也只會更新畫面顯示，重新整理後會還原、不會寫回後端。
+      {/* 操作說明 */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        ℹ️ 僅「轉單」商品可修改庫存，且庫存量不可大於 ECOUNT 庫存量。變更會先累積，按「送出修改」後才會一次寫回 PChome。
       </div>
 
       {/* KPI Cards */}
