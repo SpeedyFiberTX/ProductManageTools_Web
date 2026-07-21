@@ -473,6 +473,9 @@ export default function PchomeInventory() {
                 const overEcount = isEditing
                   ? editValue !== '' && isOverEcount(editValue, ecount)
                   : isOverEcount(displayQty, ecount);
+                // 超過 ECOUNT 或缺貨 → 紅字；符合限制 → 綠字
+                const qtyColorClass =
+                  overEcount || displayQty <= 0 ? 'text-red-500' : 'text-emerald-600';
                 return (
                   <tr
                     key={it.id}
@@ -513,20 +516,19 @@ export default function PchomeInventory() {
                         <span className="inline-flex items-center justify-end gap-2">
                           <span className="text-slate-400 line-through font-normal">{originalQty.toLocaleString()}</span>
                           <span className="text-amber-600">➜</span>
-                          <span className={displayQty <= 0 ? 'text-red-500' : 'text-emerald-600'}>
-                            {displayQty.toLocaleString()}
-                          </span>
+                          <span className={qtyColorClass}>{displayQty.toLocaleString()}</span>
                         </span>
                       ) : (
-                        <span className={displayQty <= 0 ? 'text-red-500' : 'text-emerald-600'}>
-                          {displayQty.toLocaleString()}
-                        </span>
+                        <span className={qtyColorClass}>{displayQty.toLocaleString()}</span>
                       )}
 
                       {overEcount && (
-                        <div className="mt-1 text-xs font-normal text-red-600 whitespace-nowrap">
-                          ⚠ 超過 ECOUNT 庫存量（{ecount}），請修改庫存量
-                        </div>
+                        <span
+                          title={`超過 ECOUNT 庫存量（${ecount}），請修改庫存量`}
+                          className="ml-1.5 text-red-600 cursor-help select-none"
+                        >
+                          ⚠
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-3 text-center whitespace-nowrap">
