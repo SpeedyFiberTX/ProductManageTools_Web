@@ -144,7 +144,7 @@ export default function PchomeInventory() {
       const lower = searchText.toLowerCase().trim();
       data = data.filter((it) =>
         String(it.id || '').toLowerCase().includes(lower) ||
-        String(it.vendor_pid || '').toLowerCase().includes(lower) ||
+        String(it.sku || '').toLowerCase().includes(lower) ||
         String(it.name || '').toLowerCase().includes(lower)
       );
     }
@@ -456,7 +456,7 @@ export default function PchomeInventory() {
             <div className="relative w-full sm:w-72">
               <input
                 type="text"
-                placeholder="搜尋 ID / 廠商料號 / 名稱..."
+                placeholder="搜尋 ID / SKU / 名稱..."
                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm transition"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -497,8 +497,8 @@ export default function PchomeInventory() {
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('id', e.shiftKey)}>
                   商品 ID <SortIcon columnKey="id" />
                 </th>
-                <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('vendor_pid', e.shiftKey)}>
-                  廠商料號 <SortIcon columnKey="vendor_pid" />
+                <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('sku', e.shiftKey)}>
+                  SKU <SortIcon columnKey="sku" />
                 </th>
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none" onClick={(e) => handleSort('name', e.shiftKey)}>
                   名稱 <SortIcon columnKey="name" />
@@ -539,7 +539,7 @@ export default function PchomeInventory() {
                     }`}
                   >
                     <td className="px-6 py-3 font-mono text-xs text-slate-700">{it.id}</td>
-                    <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.vendor_pid}</td>
+                    <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.sku}</td>
                     <td className="px-6 py-3 text-slate-700">{it.name}</td>
                     <td className="px-6 py-3 text-slate-600">{shiptypeLabel(it.shiptype)}</td>
                     <td className="px-6 py-3 text-right font-mono text-slate-600">
