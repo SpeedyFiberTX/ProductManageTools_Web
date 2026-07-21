@@ -24,6 +24,12 @@ const shiptypeRank = (value) =>
 const EDITABLE_SHIPTYPE = 'Trans';
 const isEditableItem = (item) => item?.shiptype === EDITABLE_SHIPTYPE;
 
+// ECOUNT 庫存量（null／未提供 視為缺貨，顯示為 0）
+const getEcountQty = (item) => Number(item?.ecount_qty) || 0;
+
+// 庫存量不可大於 ECOUNT 庫存量
+const isOverEcount = (qty, ecountQty) => Number(qty) > ecountQty;
+
 export default function PchomeInventory() {
   const { getJson, postJson } = useApi();
   const [loading, setLoading] = useState(false);
@@ -105,9 +111,9 @@ export default function PchomeInventory() {
   // --- KPI ---
   const kpi = useMemo(() => {
     const totalItems = items.length;
-    const totalQty = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
     const outOfStock = items.filter((it) => (Number(it.qty) || 0) <= 0).length;
-    return { totalItems, totalQty, outOfStock };
+    const ecountOutOfStock = items.filter((it) => getEcountQty(it) <= 0).length;
+    return { totalItems, outOfStock, ecountOutOfStock };
   }, [items]);
 
   // 出貨方式選項（依資料動態產生，並依自訂順序排序）
@@ -129,10 +135,11 @@ export default function PchomeInventory() {
       );
     }
 
+    // 缺貨判定：庫存量或 ECOUNT 庫存量任一缺貨即算缺貨
     if (stockFilter === 'in_stock') {
-      data = data.filter((it) => (Number(it.qty) || 0) > 0);
+      data = data.filter((it) => (Number(it.qty) || 0) > 0 && getEcountQty(it) > 0);
     } else if (stockFilter === 'out_of_stock') {
-      data = data.filter((it) => (Number(it.qty) || 0) <= 0);
+      data = data.filter((it) => (Number(it.qty) || 0) <= 0 || getEcountQty(it) <= 0);
     }
 
     if (shiptypeFilter !== 'all') {
@@ -145,7 +152,7 @@ export default function PchomeInventory() {
           let aValue = a[sortConfig.key];
           let bValue = b[sortConfig.key];
 
-          if (sortConfig.key === 'qty') {
+          if (sortConfig.key === 'qty' || sortConfig.key === 'ecount_qty') {
             aValue = Number(aValue) || 0;
             bValue = Number(bValue) || 0;
           } else if (sortConfig.key === 'shiptype') {
@@ -226,6 +233,11 @@ export default function PchomeInventory() {
       alert('請輸入 0 或正整數的庫存數量。');
       return;
     }
+    const ecount = getEcountQty(item);
+    if (isOverEcount(nextQty, ecount)) {
+      alert(`庫存量不可大於 ECOUNT 庫存量（${ecount}），請修改庫存量。`);
+      return;
+    }
     setEdits((prev) => {
       const copy = { ...prev };
       if (nextQty === Number(item.qty)) {
@@ -258,6 +270,16 @@ export default function PchomeInventory() {
   // 一次送出所有待送出變更
   const submitEdits = async () => {
     if (editCount === 0) return;
+
+    // 送出前再檢查一次：庫存量不可大於 ECOUNT 庫存量
+    const invalid = items.filter(
+      (it) => it.id in edits && isOverEcount(edits[it.id], getEcountQty(it))
+    );
+    if (invalid.length > 0) {
+      alert(`有 ${invalid.length} 筆庫存量大於 ECOUNT 庫存量，請先修改後再送出。`);
+      return;
+    }
+
     if (!confirm(`確定要送出 ${editCount} 筆庫存變更嗎？`)) return;
 
     setSubmitting(true);
@@ -364,7 +386,7 @@ export default function PchomeInventory() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KPICard title="品項數" value={kpi.totalItems.toLocaleString()} color="text-blue-600" />
-        <KPICard title="總庫存量" value={kpi.totalQty.toLocaleString()} color="text-emerald-600" />
+        <KPICard title="ECOUNT 缺貨品項" value={kpi.ecountOutOfStock.toLocaleString()} color="text-orange-600" />
         <KPICard title="缺貨品項" value={kpi.outOfStock.toLocaleString()} color="text-red-600" />
       </div>
 
@@ -429,6 +451,9 @@ export default function PchomeInventory() {
                 <th className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('shiptype', e.shiftKey)}>
                   出貨方式 <SortIcon columnKey="shiptype" />
                 </th>
+                <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('ecount_qty', e.shiftKey)}>
+                  ECOUNT庫存量 <SortIcon columnKey="ecount_qty" />
+                </th>
                 <th className="px-6 py-3 text-right cursor-pointer hover:bg-slate-100 transition select-none whitespace-nowrap" onClick={(e) => handleSort('qty', e.shiftKey)}>
                   庫存量 <SortIcon columnKey="qty" />
                 </th>
@@ -443,6 +468,11 @@ export default function PchomeInventory() {
                 const editable = isEditableItem(it);
                 const hasPending = it.id in edits;
                 const displayQty = hasPending ? Number(edits[it.id]) : originalQty;
+                const ecount = getEcountQty(it);
+                // 編輯中依輸入值即時判斷，否則依目前顯示值
+                const overEcount = isEditing
+                  ? editValue !== '' && isOverEcount(editValue, ecount)
+                  : isOverEcount(displayQty, ecount);
                 return (
                   <tr
                     key={it.id}
@@ -454,11 +484,17 @@ export default function PchomeInventory() {
                     <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.vendor_pid}</td>
                     <td className="px-6 py-3 text-slate-700">{it.name}</td>
                     <td className="px-6 py-3 text-slate-600">{shiptypeLabel(it.shiptype)}</td>
+                    <td className="px-6 py-3 text-right font-mono text-slate-600">
+                      <span className={ecount <= 0 ? 'text-orange-600 font-semibold' : ''}>
+                        {ecount.toLocaleString()}
+                      </span>
+                    </td>
                     <td className="px-6 py-3 text-right font-semibold">
                       {isEditing ? (
                         <input
                           type="number"
                           min={0}
+                          max={ecount}
                           step={1}
                           value={editValue}
                           autoFocus
@@ -467,7 +503,11 @@ export default function PchomeInventory() {
                             if (e.key === 'Enter') confirmEdit(it);
                             if (e.key === 'Escape') cancelEdit();
                           }}
-                          className="w-24 px-2 py-1 text-right rounded-lg border border-indigo-300 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-800 font-mono"
+                          className={`w-24 px-2 py-1 text-right rounded-lg border outline-none text-slate-800 font-mono focus:ring-2 ${
+                            overEcount
+                              ? 'border-red-400 focus:ring-red-500'
+                              : 'border-indigo-300 focus:ring-indigo-500'
+                          }`}
                         />
                       ) : hasPending ? (
                         <span className="inline-flex items-center justify-end gap-2">
@@ -481,6 +521,12 @@ export default function PchomeInventory() {
                         <span className={displayQty <= 0 ? 'text-red-500' : 'text-emerald-600'}>
                           {displayQty.toLocaleString()}
                         </span>
+                      )}
+
+                      {overEcount && (
+                        <div className="mt-1 text-xs font-normal text-red-600 whitespace-nowrap">
+                          ⚠ 超過 ECOUNT 庫存量（{ecount}），請修改庫存量
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-3 text-center whitespace-nowrap">
@@ -528,7 +574,7 @@ export default function PchomeInventory() {
 
               {paginatedItems.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     {loading ? '資料載入中...' : '無符合條件的庫存資料'}
                   </td>
                 </tr>
