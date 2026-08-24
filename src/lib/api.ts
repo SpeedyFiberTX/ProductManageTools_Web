@@ -3,8 +3,10 @@ import { useAuth } from '../auth/AuthContext';
 
 // ✅ 同網域就用空字串，跨網域就填完整 origin
 const API_BASE =  import.meta.env.VITE_API_BASE;
-// ✅ 後端若需要 API Key，設定 VITE_API_KEY 後會自動帶上 X-API-Key
+// ✅ X-API-Key 僅供 PChome 庫存 API 使用（設定 VITE_API_KEY 後才會帶上）
 const API_KEY = import.meta.env.VITE_API_KEY;
+// PChome 庫存 API 的 base，用來判斷哪些請求該帶 X-API-Key
+const PCHOME_API_BASE = import.meta.env.VITE_PCHOME_API_BASE;
 // 去重複用的 refresh promise，避免同時多個 401 重複打 refresh
 let refreshPromise: Promise<{ ok: boolean; accessToken: string | null }> | null = null;
 
@@ -15,6 +17,34 @@ function joinURL(base: string, path: string) {
   const b = base.endsWith('/') ? base.slice(0, -1) : base;
   const p = path.startsWith('/') ? path : `/${path}`;
   return b + p;
+}
+
+function toAbsoluteUrl(value: string): URL | null {
+  if (!value) return null;
+  try {
+    return new URL(value, typeof window !== 'undefined' ? window.location.origin : undefined);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 只有打向 PChome 庫存 API 的請求才帶 X-API-Key。
+ * 主後端（pmtool）用 Bearer + Cookie 驗證，且其 CORS allowedHeaders 不含
+ * X-API-Key，一旦帶上會讓 preflight 直接被瀏覽器擋下。
+ */
+function shouldSendApiKey(url: string) {
+  if (!API_KEY || !PCHOME_API_BASE) return false;
+
+  const target = toAbsoluteUrl(url);
+  const base = toAbsoluteUrl(PCHOME_API_BASE);
+  if (!target || !base) return false;
+  if (target.origin !== base.origin) return false;
+
+  // base 若帶路徑（例如 https://api.example.com/pchome），需連路徑一起比對
+  const basePath = base.pathname.replace(/\/+$/, '');
+  if (!basePath) return true;
+  return target.pathname === basePath || target.pathname.startsWith(`${basePath}/`);
 }
 
 export function useApi() {
@@ -36,8 +66,8 @@ export function useApi() {
       headers.set('Authorization', `Bearer ${tokenToUse}`);
     }
 
-    // Add X-API-Key header if configured and not already set
-    if (API_KEY && !headers.has('X-API-Key')) {
+    // 僅對 PChome 庫存 API 帶上 X-API-Key（主後端不需要，且會觸發 CORS preflight 失敗）
+    if (shouldSendApiKey(url) && !headers.has('X-API-Key')) {
       headers.set('X-API-Key', API_KEY);
     }
 
