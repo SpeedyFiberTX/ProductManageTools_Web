@@ -88,6 +88,7 @@ const METAFIELDS_FIELDS = [
   ["#ConnectorB", "filter.connector_b"],
   ["#Jacket Color", "filter.jacketColor"],
   ["#Jacket", "filter.jacket"],
+  ["#Cable Diameter", "filter.cableDiameter"],
   ["#Wavelength", "filter.wavelength_filter"],
   ["#Polarity", "filter.polarity"],
   ["#Body Type", "filter.bodyType"],

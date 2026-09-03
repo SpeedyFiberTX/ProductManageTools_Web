@@ -14,6 +14,7 @@ export const metafieldTypes = {
   "filter.connectorColor": "list.single_line_text_field",
   "filter.jacketColor": "list.single_line_text_field",
   "filter.jacket": "list.single_line_text_field",
+  "filter.cableDiameter": "list.single_line_text_field",
   "filter.wavelength_filter": "list.single_line_text_field",
   "filter.polarity": "list.single_line_text_field",
   "filter.bodyType": "list.single_line_text_field",

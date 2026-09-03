@@ -138,6 +138,14 @@ export default function Metafields_Filter({ currentRow, canEdit, isChecked, togg
                         onToggle={toggleSelected} />
                     <CardContent
                         row={currentRow}
+                        title="#Cable Diameter"
+                        field="#Cable Diameter"
+                        canEdit={canEdit}
+                        selectKeys={["filter.cableDiameter"]}
+                        isChecked={isChecked(["filter.cableDiameter"])}
+                        onToggle={toggleSelected} />
+                    <CardContent
+                        row={currentRow}
                         title="#Wavelength"
                         field="#Wavelength"
                         canEdit={canEdit}
