@@ -27,14 +27,19 @@ const isEditableItem = (item) => item?.shiptype === EDITABLE_SHIPTYPE;
 // ECOUNT 庫存量（null／未提供 視為缺貨，顯示為 0）
 const getEcountQty = (item) => Number(item?.ecount_qty) || 0;
 
-// 庫存量不可大於 ECOUNT 庫存量
-const isOverEcount = (qty, ecountQty) => Number(qty) > ecountQty;
+// 寄倉商品由 PChome 倉庫出貨，庫存量不受 ECOUNT 庫存量限制
+const CONSIGN_SHIPTYPE = 'Consign';
+const isConsignItem = (item) => item?.shiptype === CONSIGN_SHIPTYPE;
+
+// 庫存量不可大於 ECOUNT 庫存量（寄倉商品不適用）
+const isOverEcount = (item, qty) =>
+  !isConsignItem(item) && Number(qty) > getEcountQty(item);
 
 // 預設排序優先序：庫存量待修改 → 缺貨 → 其它
 const statusRank = (item) => {
   const qty = Number(item?.qty) || 0;
   const ecount = getEcountQty(item);
-  if (isOverEcount(qty, ecount)) return 0; // 庫存量待修改
+  if (isOverEcount(item, qty)) return 0; // 庫存量待修改
   if (qty <= 0 || ecount <= 0) return 1; // 缺貨（庫存量或 ECOUNT 任一缺貨）
   return 2; // 其它
 };
@@ -124,9 +129,7 @@ export default function PchomeInventory() {
     const outOfStock = items.filter((it) => (Number(it.qty) || 0) <= 0).length;
     const ecountOutOfStock = items.filter((it) => getEcountQty(it) <= 0).length;
     // 庫存量大於 ECOUNT 庫存量 → 待修改
-    const needsFix = items.filter((it) =>
-      isOverEcount(Number(it.qty) || 0, getEcountQty(it))
-    ).length;
+    const needsFix = items.filter((it) => isOverEcount(it, it.qty)).length;
     return { totalItems, outOfStock, ecountOutOfStock, needsFix };
   }, [items]);
 
@@ -155,7 +158,7 @@ export default function PchomeInventory() {
     } else if (stockFilter === 'out_of_stock') {
       data = data.filter((it) => (Number(it.qty) || 0) <= 0 || getEcountQty(it) <= 0);
     } else if (stockFilter === 'needs_fix') {
-      data = data.filter((it) => isOverEcount(Number(it.qty) || 0, getEcountQty(it)));
+      data = data.filter((it) => isOverEcount(it, it.qty));
     }
 
     if (shiptypeFilter !== 'all') {
@@ -254,7 +257,7 @@ export default function PchomeInventory() {
       return;
     }
     const ecount = getEcountQty(item);
-    if (isOverEcount(nextQty, ecount)) {
+    if (isOverEcount(item, nextQty)) {
       alert(`庫存量不可大於 ECOUNT 庫存量（${ecount}），請修改庫存量。`);
       return;
     }
@@ -293,7 +296,7 @@ export default function PchomeInventory() {
 
     // 送出前再檢查一次：庫存量不可大於 ECOUNT 庫存量
     const invalid = items.filter(
-      (it) => it.id in edits && isOverEcount(edits[it.id], getEcountQty(it))
+      (it) => it.id in edits && isOverEcount(it, edits[it.id])
     );
     if (invalid.length > 0) {
       alert(`有 ${invalid.length} 筆庫存量大於 ECOUNT 庫存量，請先修改後再送出。`);
@@ -526,8 +529,8 @@ export default function PchomeInventory() {
                 const ecount = getEcountQty(it);
                 // 編輯中依輸入值即時判斷，否則依目前顯示值
                 const overEcount = isEditing
-                  ? editValue !== '' && isOverEcount(editValue, ecount)
-                  : isOverEcount(displayQty, ecount);
+                  ? editValue !== '' && isOverEcount(it, editValue)
+                  : isOverEcount(it, displayQty);
                 // 超過 ECOUNT 或缺貨 → 紅字；符合限制 → 綠字
                 const qtyColorClass =
                   overEcount || displayQty <= 0 ? 'text-red-500' : 'text-emerald-600';
